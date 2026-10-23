@@ -24,6 +24,17 @@ function dragHandle(name: string, from: { x: number; y: number }, to: { x: numbe
   fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: to.x, clientY: to.y });
 }
 
+function clickHandle(name: string, at: { x: number; y: number }) {
+  const handle = within(panel(name)).getByTestId('handle');
+  fireEvent.pointerDown(handle, { pointerId: 1, button: 0, clientX: at.x, clientY: at.y });
+  fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: at.x, clientY: at.y });
+}
+
+/** Let any pending router navigation run. */
+async function settle() {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+
 function layoutParam(router: ReturnType<typeof createAppRouter>): string | null {
   return new URLSearchParams(router.state.location.searchStr).get('layout');
 }
@@ -101,5 +112,32 @@ describe('layout in the URL', () => {
 
     await expect.poll(() => layoutParam(router)).not.toBeNull();
     expect([...new URLSearchParams(router.state.location.searchStr).keys()]).toEqual(['layout']);
+  });
+
+  it('leaves a docked panel docked and the URL alone when its handle is clicked without moving', async () => {
+    // Counter docked alone in the right column, already in front.
+    const link =
+      'v1_increment~f~440~120~320~240~440~120~320~240_decrement~f~480~160~320~240~n_counter~d~right~0~n';
+    const { router } = renderAt(`/?layout=${link}`);
+    const counter = await screen.findByRole('region', { name: 'Counter' });
+
+    clickHandle('Counter', { x: 1024 - 300, y: 50 });
+
+    expect(counter).toHaveAttribute('data-placement', 'docked');
+    await settle();
+    expect(layoutParam(router)).toBe(link);
+  });
+
+  it('writes nothing when the front floating panel’s handle is clicked without moving', async () => {
+    const { router } = renderAt('/');
+    const decrement = await screen.findByRole('region', { name: 'Decrement' });
+
+    clickHandle('Decrement', {
+      x: parseFloat(decrement.style.left) + 10,
+      y: parseFloat(decrement.style.top) + 10,
+    });
+
+    await settle();
+    expect(layoutParam(router)).toBeNull();
   });
 });

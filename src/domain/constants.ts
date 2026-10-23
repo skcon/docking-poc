@@ -33,3 +33,9 @@ export const HANDLE_HEIGHT_PX = 32;
  * panel height so a docked panel keeps a familiar shape.
  */
 export const BOTTOM_ZONE_HEIGHT_PX = 240;
+
+/**
+ * How far (CSS px) the pointer must move from where a handle was pressed before the press
+ * becomes a drag. A shorter press is a click: it undocks nothing and moves nothing.
+ */
+export const DRAG_THRESHOLD_PX = 4;

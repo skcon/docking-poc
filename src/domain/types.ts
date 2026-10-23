@@ -33,14 +33,21 @@ export type DockTarget = { zone: ZoneId; slot: SlotId };
 
 /**
  * The in-progress handle drag. Transient: never persisted or put in the URL.
- * `grabOffset` is the pointer's offset from the dragged panel's top-left when the drag began.
+ * `startPointer` is where the handle was pressed. Until the pointer has moved more than
+ * DRAG_THRESHOLD_PX from it, `moved` is false: nothing moves or undocks, and a release is a click.
+ * `grabOffset` is the pointer's offset from the dragged panel's top-left.
  * `dockTarget` is where a release would dock the panel (shown by the drop highlight), or null.
  */
 export type DragState = {
   panelId: PanelId;
+  startPointer: Point;
+  moved: boolean;
   grabOffset: Point;
   dockTarget: DockTarget | null;
 } | null;
+
+/** A drag that is in progress. */
+export type ActiveDrag = NonNullable<DragState>;
 
 /** What the drag lifecycle transitions read and return: the layout plus the transient drag. */
 export type DragSession = { layout: Layout; drag: DragState };

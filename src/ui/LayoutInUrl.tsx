@@ -4,10 +4,10 @@ import { encodeLayout } from '../domain';
 import { useAppStore, type AppState } from '../state/store';
 import { currentViewport } from './viewport';
 
-/** A drag or resize just ended: the points where the layout is written to the URL. */
+/** A drag (not a click) or resize just ended: the points where the layout is written to the URL. */
 function interactionEnded(state: AppState, previous: AppState): boolean {
   return (
-    (previous.drag !== null && state.drag === null) ||
+    (previous.drag?.moved === true && state.drag === null) ||
     (previous.resize !== null && state.resize === null)
   );
 }

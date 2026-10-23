@@ -179,9 +179,10 @@ describe('undocking by dragging a docked panel’s handle', () => {
       pointer: { x: 100, y: 50 },
     });
 
-    expect(started.layout.panels.counter.placement).toEqual({
+    const justPastThreshold = dragMove(started, viewport, { pointer: { x: 105, y: 50 } });
+    expect(justPastThreshold.layout.panels.counter.placement).toEqual({
       kind: 'floating',
-      rect: { x: 0, y: 40, width: 400, height: 300 },
+      rect: { x: 5, y: 40, width: 400, height: 300 },
     });
     const moved = dragMove(started, viewport, { pointer: { x: 600, y: 400 } });
     expect(rectOf(moved.layout, 'counter')).toEqual({ x: 500, y: 390, width: 400, height: 300 });
@@ -193,9 +194,10 @@ describe('undocking by dragging a docked panel’s handle', () => {
       panelId: 'counter',
       pointer: { x: 175, y: 50 },
     });
+    const moved = dragMove(started, viewport, { pointer: { x: 180, y: 50 } });
 
-    expect(rectOf(started.layout, 'counter')).toEqual({ x: 15, y: 40, width: 320, height: 240 });
-    expect(started.drag?.grabOffset).toEqual({ x: 160, y: 10 });
+    expect(rectOf(moved.layout, 'counter')).toEqual({ x: 20, y: 40, width: 320, height: 240 });
+    expect(moved.drag?.grabOffset).toEqual({ x: 160, y: 10 });
   });
 
   it('keeps the whole handle on screen and the pointer on it when undocking near the right edge', () => {
@@ -219,7 +221,7 @@ describe('undocking by dragging a docked panel’s handle', () => {
     });
     const moved = dragMove(started, viewport, { pointer: { x: 1170, y: 150 } });
 
-    expect(rectOf(started.layout, 'counter')).toEqual({ x: 780, y: 40, width: 500, height: 300 });
+    // The handle is kept on screen (x 780), so the pointer is 490 px along it.
     expect(rectOf(moved.layout, 'counter')).toEqual({ x: 680, y: 140, width: 500, height: 300 });
   });
 
@@ -293,8 +295,66 @@ describe('undocking by dragging a docked panel’s handle', () => {
       panelId: 'counter',
       pointer: { x: 1000, y: 50 },
     });
+    const floatedAgain = dragMove(again, viewport, { pointer: { x: 900, y: 300 } });
 
-    const { width, height } = rectOf(again.layout, 'counter');
+    const { width, height } = rectOf(floatedAgain.layout, 'counter');
     expect({ width, height }).toEqual({ width: 320, height: 240 });
+  });
+});
+
+describe('the drag threshold', () => {
+  function dockedLeftAlone(): Layout {
+    const layout = defaultLayout();
+    return {
+      ...layout,
+      panels: {
+        ...layout.panels,
+        counter: {
+          id: 'counter',
+          placement: { kind: 'docked', zone: 'left', slot: 0 },
+          lastFloatingRect: null,
+        },
+      },
+    };
+  }
+
+  it('leaves a docked panel docked when its handle is clicked without moving', () => {
+    const started = dragStart({ layout: dockedLeftAlone(), drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 100, y: 50 },
+    });
+    const ended = dragEnd(started, viewport, { pointer: { x: 100, y: 50 } });
+
+    expect(ended.layout.panels.counter.placement).toEqual({
+      kind: 'docked',
+      zone: 'left',
+      slot: 0,
+    });
+    expect(ended.drag).toBeNull();
+  });
+
+  it('undocks only once the pointer has moved more than 4 px from where it was pressed', () => {
+    const started = dragStart({ layout: dockedLeftAlone(), drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 100, y: 50 },
+    });
+
+    const within = dragMove(started, viewport, { pointer: { x: 103, y: 52 } });
+    expect(within.layout.panels.counter.placement.kind).toBe('docked');
+
+    const past = dragMove(within, viewport, { pointer: { x: 105, y: 50 } });
+    expect(past.layout.panels.counter.placement.kind).toBe('floating');
+  });
+
+  it('does not move a floating panel while the pointer stays within the threshold', () => {
+    const layout = layoutWith('counter', { x: 400, y: 100, width: 320, height: 240 });
+    const started = dragStart({ layout, drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 410, y: 110 },
+    });
+
+    const within = dragMove(started, viewport, { pointer: { x: 413, y: 110 } });
+
+    expect(rectOf(within.layout, 'counter')).toEqual({ x: 400, y: 100, width: 320, height: 240 });
   });
 });
