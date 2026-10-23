@@ -4,14 +4,14 @@
  * This module only orchestrates; each concern lives in its own module:
  * - move.ts: moving a floating panel and clamping its handle on screen
  * - raise.ts: z-order
- * - zones.ts: drop target and docking
+ * - zones.ts: dock target and docking
  * - undock.ts: floating a docked panel under the pointer
  */
 import { moveFloatingPanel } from './move';
 import { floatingRectOf } from './panels';
 import { raisePanel } from './raise';
 import { undockPanel } from './undock';
-import { dockPanel, dropTargetAt } from './zones';
+import { dockPanel, dockTargetAt } from './zones';
 import type { DragEndEvent, DragMoveEvent, DragSession, DragStartEvent, Viewport } from './types';
 
 /**
@@ -24,11 +24,11 @@ export function dragStart(
   event: DragStartEvent,
 ): DragSession {
   const layout = raisePanel(session.layout, event.panelId);
-  const undocked = undockPanel(layout, viewport, event.panelId, event.pointer);
-  if (undocked) {
+  const floated = undockPanel(layout, viewport, event.panelId, event.pointer);
+  if (floated) {
     return {
-      layout: undocked.layout,
-      drag: { panelId: event.panelId, grabOffset: undocked.grabOffset, dropTarget: null },
+      layout: floated.layout,
+      drag: { panelId: event.panelId, grabOffset: floated.grabOffset, dockTarget: null },
     };
   }
   const rect = floatingRectOf(layout, event.panelId);
@@ -38,7 +38,7 @@ export function dragStart(
     drag: {
       panelId: event.panelId,
       grabOffset: { x: event.pointer.x - rect.x, y: event.pointer.y - rect.y },
-      dropTarget: null,
+      dockTarget: null,
     },
   };
 }
@@ -56,17 +56,17 @@ export function dragMove(
     y: event.pointer.y - drag.grabOffset.y,
   };
   const layout = moveFloatingPanel(session.layout, viewport, drag.panelId, topLeft);
-  const dropTarget = dropTargetAt(layout, viewport, event.pointer, drag.panelId);
-  return { layout, drag: { ...drag, dropTarget } };
+  const dockTarget = dockTargetAt(layout, viewport, event.pointer, drag.panelId);
+  return { layout, drag: { ...drag, dockTarget } };
 }
 
-/** Pointer release: dock into the drop target if there is one, else float at the final position. */
+/** Pointer release: dock into the dock target if there is one, else float at the final position. */
 export function dragEnd(
   session: DragSession,
   viewport: Viewport,
   event: DragEndEvent,
 ): DragSession {
   const moved = dragMove(session, viewport, event);
-  if (!moved.drag?.dropTarget) return { layout: moved.layout, drag: null };
-  return { layout: dockPanel(moved.layout, moved.drag.panelId, moved.drag.dropTarget), drag: null };
+  if (!moved.drag?.dockTarget) return { layout: moved.layout, drag: null };
+  return { layout: dockPanel(moved.layout, moved.drag.panelId, moved.drag.dockTarget), drag: null };
 }

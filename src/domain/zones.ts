@@ -2,8 +2,8 @@
  * Zones: the code-declared areas panels dock into, and the geometry derived from them.
  * Pure functions of (layout, viewport); docked rects are derived, never stored.
  */
-import { EDGE_TRIGGER_PX, ZONE_WIDTH_PX } from './constants';
-import type { Layout, PanelId, Point, Rect, SlotId, Viewport, ZoneId } from './types';
+import { BOTTOM_ZONE_HEIGHT_PX, EDGE_TRIGGER_PX, ZONE_WIDTH_PX } from './constants';
+import type { DockTarget, Layout, PanelId, Point, Rect, SlotId, Viewport, ZoneId } from './types';
 
 /** The screen edge a zone hugs. */
 export type ZoneEdge = 'left' | 'right' | 'bottom';
@@ -17,21 +17,12 @@ export type ZoneDefinition = {
   readonly slotAxis: 'vertical' | 'horizontal';
 };
 
-/**
- * Height of the bottom strip. Spec #2 does not fix it; this POC uses the default floating
- * panel height so a docked panel keeps a familiar shape.
- */
-export const BOTTOM_ZONE_HEIGHT_PX = 240;
-
 /** The three zones (spec #2). Order breaks ties when the pointer is equally near two edges. */
 export const ZONES = [
   { id: 'left', edge: 'left', capacity: 2, slotAxis: 'vertical' },
   { id: 'right', edge: 'right', capacity: 2, slotAxis: 'vertical' },
   { id: 'bottom', edge: 'bottom', capacity: 2, slotAxis: 'horizontal' },
 ] as const satisfies readonly ZoneDefinition[];
-
-/** Where a release would dock the dragged panel. */
-export type DropTarget = { zone: ZoneId; slot: SlotId };
 
 function zoneById(id: ZoneId): ZoneDefinition {
   const zone = ZONES.find((z) => z.id === id);
@@ -126,12 +117,12 @@ function nearestZoneInReach(viewport: Viewport, pointer: Point): ZoneDefinition 
  * The zone whose edge is nearest wins, if the pointer is within EDGE_TRIGGER_PX of it.
  * The slot follows the pointer half, falling back to the free slot; a full zone gives null.
  */
-export function dropTargetAt(
+export function dockTargetAt(
   layout: Layout,
   viewport: Viewport,
   pointer: Point,
   draggedId: PanelId,
-): DropTarget | null {
+): DockTarget | null {
   const zone = nearestZoneInReach(viewport, pointer);
   if (!zone) return null;
   const taken = occupiedSlots(layout, zone.id, draggedId);
@@ -140,7 +131,7 @@ export function dropTargetAt(
 }
 
 /** Dock the panel into `target`, keeping its last floating rect so a later undock restores it. */
-export function dockPanel(layout: Layout, panelId: PanelId, target: DropTarget): Layout {
+export function dockPanel(layout: Layout, panelId: PanelId, target: DockTarget): Layout {
   const panel = layout.panels[panelId];
   return {
     ...layout,

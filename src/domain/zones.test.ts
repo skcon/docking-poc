@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultLayout } from './layout';
 import type { Layout, PanelId, Rect, SlotId, Viewport, ZoneId } from './types';
-import { dockedRect, dropTargetAt } from './zones';
+import { dockedRect, dockTargetAt } from './zones';
 
 const viewport: Viewport = { width: 1280, height: 800, top: 40 };
 
@@ -15,50 +15,50 @@ function withDocked(layout: Layout, id: PanelId, zone: ZoneId, slot: SlotId): La
   };
 }
 
-describe('drop target while dragging a floating panel', () => {
+describe('dock target while dragging a floating panel', () => {
   it('targets the left zone when the pointer is within 80 px of the left edge', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 80, y: 200 }, 'counter')?.zone).toBe(
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 80, y: 200 }, 'counter')?.zone).toBe(
       'left',
     );
   });
 
   it('targets nothing when the pointer is farther than 80 px from every edge', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 81, y: 200 }, 'counter')).toBeNull();
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 81, y: 200 }, 'counter')).toBeNull();
   });
 
   it('targets the right and bottom zones within 80 px of their edges', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 1200, y: 300 }, 'counter')?.zone).toBe(
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 1200, y: 300 }, 'counter')?.zone).toBe(
       'right',
     );
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 640, y: 720 }, 'counter')?.zone).toBe(
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 640, y: 720 }, 'counter')?.zone).toBe(
       'bottom',
     );
   });
 
   it('lets the nearest edge win near a corner', () => {
     // 30 px from the left edge, 60 px from the bottom edge.
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 30, y: 740 }, 'counter')?.zone).toBe(
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 30, y: 740 }, 'counter')?.zone).toBe(
       'left',
     );
     // 60 px from the right edge, 10 px from the bottom edge.
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 1220, y: 790 }, 'counter')?.zone).toBe(
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 1220, y: 790 }, 'counter')?.zone).toBe(
       'bottom',
     );
   });
 
   it('never targets anything while the pointer is over the action bar', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 10, y: 20 }, 'counter')).toBeNull();
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 10, y: 20 }, 'counter')).toBeNull();
   });
 });
 
 describe('slot choice', () => {
   // The map runs from y = 40 to y = 800, so a column's halves meet at y = 420.
   it('picks the top slot of a column in its upper half and the bottom slot in its lower half', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 10, y: 410 }, 'counter')).toEqual({
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 10, y: 410 }, 'counter')).toEqual({
       zone: 'left',
       slot: 0,
     });
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 1270, y: 430 }, 'counter')).toEqual({
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 1270, y: 430 }, 'counter')).toEqual({
       zone: 'right',
       slot: 1,
     });
@@ -66,11 +66,11 @@ describe('slot choice', () => {
 
   // The bottom strip runs between the 350 px columns, from x = 350 to x = 930: halves meet at 640.
   it('picks the left slot of the bottom strip in its left half and the right slot in its right half', () => {
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 630, y: 790 }, 'counter')).toEqual({
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 630, y: 790 }, 'counter')).toEqual({
       zone: 'bottom',
       slot: 0,
     });
-    expect(dropTargetAt(defaultLayout(), viewport, { x: 650, y: 790 }, 'counter')).toEqual({
+    expect(dockTargetAt(defaultLayout(), viewport, { x: 650, y: 790 }, 'counter')).toEqual({
       zone: 'bottom',
       slot: 1,
     });
@@ -79,7 +79,7 @@ describe('slot choice', () => {
   it('falls back to the free slot when the chosen one is taken', () => {
     const layout = withDocked(defaultLayout(), 'increment', 'left', 0);
 
-    expect(dropTargetAt(layout, viewport, { x: 10, y: 100 }, 'counter')).toEqual({
+    expect(dockTargetAt(layout, viewport, { x: 10, y: 100 }, 'counter')).toEqual({
       zone: 'left',
       slot: 1,
     });
@@ -93,7 +93,7 @@ describe('slot choice', () => {
       1,
     );
 
-    expect(dropTargetAt(layout, viewport, { x: 640, y: 790 }, 'counter')).toBeNull();
+    expect(dockTargetAt(layout, viewport, { x: 640, y: 790 }, 'counter')).toBeNull();
   });
 });
 

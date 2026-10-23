@@ -27,3 +27,9 @@ export const DEFAULT_FLOATING_STAGGER = { x: 40, y: 40 } as const;
 
 /** Height of a panel's handle. Handle clamping keeps this strip on screen. */
 export const HANDLE_HEIGHT_PX = 32;
+
+/**
+ * Height of the bottom strip. Spec #2 does not fix it; this POC uses the default floating
+ * panel height so a docked panel keeps a familiar shape.
+ */
+export const BOTTOM_ZONE_HEIGHT_PX = 240;

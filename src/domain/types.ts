@@ -28,15 +28,18 @@ export type Layout = {
 /** A position in window coordinates (CSS px), e.g. a pointer. */
 export type Point = { x: number; y: number };
 
+/** A zone and slot a panel can dock into. */
+export type DockTarget = { zone: ZoneId; slot: SlotId };
+
 /**
  * The in-progress handle drag. Transient: never persisted or put in the URL.
  * `grabOffset` is the pointer's offset from the dragged panel's top-left when the drag began.
- * `dropTarget` is the zone and slot a release would dock into (set by drop-target logic, #6).
+ * `dockTarget` is where a release would dock the panel (shown by the drop highlight), or null.
  */
 export type DragState = {
   panelId: PanelId;
   grabOffset: Point;
-  dropTarget: { zone: ZoneId; slot: SlotId } | null;
+  dockTarget: DockTarget | null;
 } | null;
 
 /** What the drag lifecycle transitions read and return: the layout plus the transient drag. */

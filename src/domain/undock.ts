@@ -7,8 +7,8 @@ import { withFloatingRect } from './panels';
 import type { Layout, PanelId, Point, Viewport } from './types';
 import { dockedRect } from './zones';
 
-/** The undocked layout and the grab offset the drag continues with. */
-export type Undocked = { layout: Layout; grabOffset: Point };
+/** The layout with the panel floated out of its zone, and the grab offset the drag continues with. */
+export type FloatedFromZone = { layout: Layout; grabOffset: Point };
 
 /**
  * Float a docked panel under `pointer`, keeping the point where its handle was grabbed.
@@ -24,7 +24,7 @@ export function undockPanel(
   viewport: Viewport,
   panelId: PanelId,
   pointer: Point,
-): Undocked | null {
+): FloatedFromZone | null {
   const docked = dockedRect(layout, viewport, panelId);
   if (!docked) return null;
   const { width, height } = layout.panels[panelId].lastFloatingRect ?? DEFAULT_FLOATING;

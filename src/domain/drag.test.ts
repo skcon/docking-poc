@@ -109,12 +109,12 @@ describe('docking by dragging to an edge', () => {
     });
   }
 
-  it('shows the drop target while the pointer is near an edge, and clears it when it leaves', () => {
+  it('shows the dock target while the pointer is near an edge, and clears it when it leaves', () => {
     const nearLeft = dragMove(startDragging(), viewport, { pointer: { x: 20, y: 600 } });
-    expect(nearLeft.drag?.dropTarget).toEqual({ zone: 'left', slot: 1 });
+    expect(nearLeft.drag?.dockTarget).toEqual({ zone: 'left', slot: 1 });
 
     const away = dragMove(nearLeft, viewport, { pointer: { x: 600, y: 400 } });
-    expect(away.drag?.dropTarget).toBeNull();
+    expect(away.drag?.dockTarget).toBeNull();
   });
 
   it('docks the panel into the target slot when released there', () => {
@@ -253,7 +253,7 @@ describe('undocking by dragging a docked panel’s handle', () => {
     });
   });
 
-  it('brings the undocked panel to the front', () => {
+  it('brings the panel it floated out of its zone to the front', () => {
     const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },
@@ -283,7 +283,7 @@ describe('undocking by dragging a docked panel’s handle', () => {
     });
   });
 
-  it('remembers the undocked size, so docking and undocking again restores it', () => {
+  it('remembers the floating size, so docking and undocking again restores it', () => {
     const started = dragStart({ layout: dockedLeft(null), drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },

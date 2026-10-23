@@ -5,7 +5,7 @@ type DropHighlightProps = { viewport: Viewport; zIndex: number };
 
 /** Light-blue translucent overlay over the zone a release would dock the dragged panel into. */
 export function DropHighlight({ viewport, zIndex }: DropHighlightProps) {
-  const zone = useAppStore((s) => s.drag?.dropTarget?.zone ?? null);
+  const zone = useAppStore((s) => s.drag?.dockTarget?.zone ?? null);
   if (zone === null) return null;
   const { x, y, width, height } = zoneRect(viewport, zone);
 

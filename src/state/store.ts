@@ -63,7 +63,7 @@ function initialState(): AppState {
   return { layout: defaultLayout(), drag: null, resize: null, counter: 0 };
 }
 
-function session(s: AppState): DragSession {
+function dragSession(s: AppState): DragSession {
   return { layout: s.layout, drag: s.drag };
 }
 
@@ -77,9 +77,9 @@ export const useAppStore = create<AppStore>()((set) => ({
   decrement: () => set((s) => ({ counter: s.counter - 1 })),
   raisePanel: (panelId) => set((s) => ({ layout: raisePanel(s.layout, panelId) })),
   startDrag: (panelId, pointer, viewport) =>
-    set((s) => dragStart(session(s), viewport, { panelId, pointer })),
-  moveDrag: (pointer, viewport) => set((s) => dragMove(session(s), viewport, { pointer })),
-  endDrag: (pointer, viewport) => set((s) => dragEnd(session(s), viewport, { pointer })),
+    set((s) => dragStart(dragSession(s), viewport, { panelId, pointer })),
+  moveDrag: (pointer, viewport) => set((s) => dragMove(dragSession(s), viewport, { pointer })),
+  endDrag: (pointer, viewport) => set((s) => dragEnd(dragSession(s), viewport, { pointer })),
   startResize: (panelId, edge, pointer, viewport) =>
     set((s) => resizeStart(resizeSession(s), viewport, { panelId, edge, pointer })),
   moveResize: (pointer, viewport) =>
