@@ -10,3 +10,6 @@ afterEach(() => {
 Element.prototype.setPointerCapture ??= () => {};
 Element.prototype.releasePointerCapture ??= () => {};
 Element.prototype.hasPointerCapture ??= () => false;
+
+// jsdom does not implement scrolling; the router's scroll handling calls it on navigation.
+window.scrollTo = () => {};

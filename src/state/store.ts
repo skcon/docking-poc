@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import {
   clampToViewport,
+  decodeLayout,
   defaultLayout,
   dragEnd,
   dragMove,
   dragStart,
+  encodeLayout,
   raisePanel,
   resizeEnd,
   resizeMove,
@@ -48,6 +50,11 @@ export type AppActions = {
   endResize: (pointer: Point, viewport: Viewport) => void;
   /** The browser window changed size: pull floating panels back into view. */
   changeViewport: (viewport: Viewport) => void;
+  /**
+   * Rebuild the layout from an encoded layout (the URL), pulled into view. Malformed input
+   * gives the default layout; text that already encodes the current layout changes nothing.
+   */
+  loadLayout: (encoded: unknown, viewport: Viewport) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -79,6 +86,12 @@ export const useAppStore = create<AppStore>()((set) => ({
     set((s) => resizeMove(resizeSession(s), viewport, { pointer })),
   endResize: (pointer, viewport) => set((s) => resizeEnd(resizeSession(s), viewport, { pointer })),
   changeViewport: (viewport) => set((s) => ({ layout: clampToViewport(s.layout, viewport) })),
+  loadLayout: (encoded, viewport) =>
+    set((s) =>
+      encoded === encodeLayout(s.layout)
+        ? s
+        : { layout: clampToViewport(decodeLayout(encoded), viewport) },
+    ),
 }));
 
 /** Restore the default layout, no drag or resize and a zero counter, keeping the actions. */
