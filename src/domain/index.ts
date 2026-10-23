@@ -4,5 +4,7 @@ export * from './layout';
 export * from './move';
 export * from './panels';
 export * from './raise';
+export * from './resize';
+export * from './viewport';
 export type * from './types';
 export * from './zones';

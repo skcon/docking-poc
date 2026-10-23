@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { resetStore } from '../state/store';
 import { App } from './App';
 
@@ -86,5 +86,80 @@ describe('docking panels', () => {
     expect(counter.style.top).toBe('40px');
     expect(counter.style.width).toBe('350px');
     expect(counter.style.height).toBe(`${768 - 40}px`);
+  });
+
+  it('offers no resize edges on a docked panel', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const grab = { x: parseFloat(counter.style.left) + 10, y: parseFloat(counter.style.top) + 10 };
+
+    dragHandle('Counter', grab, { x: 10, y: 300 });
+
+    expect(within(counter).queryByTestId('resize-se')).not.toBeInTheDocument();
+  });
+
+  it('keeps a docked panel in its column when the browser window is resized', () => {
+    const initialWidth = window.innerWidth;
+    render(<App />);
+    const counter = panel('Counter');
+    const grab = { x: parseFloat(counter.style.left) + 10, y: parseFloat(counter.style.top) + 10 };
+    dragHandle('Counter', grab, { x: 1014, y: 300 });
+
+    act(() => {
+      window.innerWidth = 900;
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(counter.style.left).toBe(`${900 - 350}px`);
+    window.innerWidth = initialWidth;
+  });
+});
+
+describe('resizing floating panels', () => {
+  const initialWidth = window.innerWidth;
+
+  beforeEach(() => {
+    resetStore();
+  });
+
+  afterEach(() => {
+    window.innerWidth = initialWidth;
+  });
+
+  it('resizes a panel when its bottom-right corner is dragged', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const width = parseFloat(counter.style.width);
+    const height = parseFloat(counter.style.height);
+    const corner = within(counter).getByTestId('resize-se');
+
+    fireEvent.pointerDown(corner, { pointerId: 1, button: 0, clientX: 500, clientY: 300 });
+    fireEvent.pointerMove(corner, { pointerId: 1, clientX: 540, clientY: 330 });
+    fireEvent.pointerUp(corner, { pointerId: 1, button: 0, clientX: 540, clientY: 330 });
+
+    expect(counter.style.width).toBe(`${width + 40}px`);
+    expect(counter.style.height).toBe(`${height + 30}px`);
+  });
+
+  it('offers every edge and corner for resizing', () => {
+    render(<App />);
+    const counter = panel('Counter');
+
+    for (const edge of ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']) {
+      expect(within(counter).getByTestId(`resize-${edge}`)).toBeInTheDocument();
+    }
+  });
+
+  it('pulls a panel back into view when the browser window shrinks', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const width = parseFloat(counter.style.width);
+
+    act(() => {
+      window.innerWidth = 600;
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(counter.style.left).toBe(`${600 - width}px`);
   });
 });

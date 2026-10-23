@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { dockedRect, PANEL_TITLES } from '../domain';
 import { useAppStore } from '../state/store';
 import { DropHighlight } from './DropHighlight';
 import { Panel } from './Panel';
 import { PANEL_CONTENTS } from './panelContents';
-import { currentViewport } from './viewport';
+import { currentViewport, useWindowResize } from './viewport';
 
 /**
  * Renders every panel from the store's layout, stacked by z-order. Docked panels sit below
@@ -11,7 +12,9 @@ import { currentViewport } from './viewport';
  */
 export function PanelLayer() {
   const layout = useAppStore((s) => s.layout);
-  const viewport = currentViewport();
+  // Docked rects and the drop highlight are derived from the viewport, so re-render on resize.
+  const [viewport, setViewport] = useState(currentViewport);
+  useWindowResize(setViewport);
   const floatingBase = layout.zOrder.length + 1;
 
   return (
