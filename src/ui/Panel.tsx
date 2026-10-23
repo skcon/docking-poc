@@ -1,6 +1,7 @@
 import { useId, type PointerEvent, type ReactNode } from 'react';
 import { HANDLE_HEIGHT_PX, type PanelId, type PanelState } from '../domain';
 import { useAppStore } from '../state/store';
+import { ResizeEdges } from './ResizeEdges';
 import { currentViewport, pointerOf } from './viewport';
 
 type PanelProps = {
@@ -26,6 +27,8 @@ export function Panel({ panel, title, zIndex, children }: PanelProps) {
     >
       <Handle id={titleId} panelId={panel.id} title={title} />
       <div className="flex flex-1 items-center justify-center p-4">{children}</div>
+      {/* Only floating panels are resizable; docked panels must not render ResizeEdges. */}
+      <ResizeEdges panelId={panel.id} />
     </section>
   );
 }

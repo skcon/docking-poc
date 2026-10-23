@@ -45,3 +45,24 @@ export type DragSession = { layout: Layout; drag: DragState };
 export type DragStartEvent = { panelId: PanelId; pointer: Point };
 export type DragMoveEvent = { pointer: Point };
 export type DragEndEvent = { pointer: Point };
+
+/** The edge or corner of a floating panel being dragged to resize it (compass directions). */
+export type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+/**
+ * The in-progress resize. Transient: never persisted or put in the URL.
+ * `startPointer` and `startRect` are the pointer and the panel's rect when the resize began.
+ */
+export type ResizeState = {
+  panelId: PanelId;
+  edge: ResizeEdge;
+  startPointer: Point;
+  startRect: Rect;
+} | null;
+
+/** What the resize lifecycle transitions read and return: the layout plus the transient resize. */
+export type ResizeSession = { layout: Layout; resize: ResizeState };
+
+export type ResizeStartEvent = { panelId: PanelId; edge: ResizeEdge; pointer: Point };
+export type ResizeMoveEvent = { pointer: Point };
+export type ResizeEndEvent = { pointer: Point };
