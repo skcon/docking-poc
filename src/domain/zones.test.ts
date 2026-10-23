@@ -76,6 +76,16 @@ describe('slot choice', () => {
     });
   });
 
+  it('picks the bottom strip slot whose rect the pointer is over, not the strip half, on a wide screen', () => {
+    // Strip from x = 350 to 1570; slots are capped at 350 px: [350, 700] and [700, 1050].
+    const wide: Viewport = { width: 1920, height: 1080, top: 40 };
+
+    expect(dockTargetAt(defaultLayout(), wide, { x: 690, y: 1070 }, 'counter')?.slot).toBe(0);
+    expect(dockTargetAt(defaultLayout(), wide, { x: 800, y: 1070 }, 'counter')?.slot).toBe(1);
+    // Past both slots: the nearest one.
+    expect(dockTargetAt(defaultLayout(), wide, { x: 1400, y: 1070 }, 'counter')?.slot).toBe(1);
+  });
+
   it('falls back to the free slot when the chosen one is taken', () => {
     const layout = withDocked(defaultLayout(), 'increment', 'left', 0);
 

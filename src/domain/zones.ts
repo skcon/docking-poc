@@ -56,11 +56,38 @@ export function zoneRect(viewport: Viewport, zoneId: ZoneId): Rect {
   }
 }
 
-/** The slot under the pointer: which half of the zone (along its slot axis) the pointer is in. */
-function slotByPointerHalf(zone: ZoneDefinition, viewport: Viewport, pointer: Point): SlotId {
-  const rect = zoneRect(viewport, zone.id);
-  if (zone.slotAxis === 'vertical') return pointer.y < rect.y + rect.height / 2 ? 0 : 1;
-  return pointer.x < rect.x + rect.width / 2 ? 0 : 1;
+/**
+ * The rect of one slot of a zone with every slot taken. Column: the slots split its height
+ * evenly (slot 0 on top). Bottom strip: slots sit side by side from the strip's left end,
+ * each an equal share of the strip but capped at ZONE_WIDTH_PX.
+ */
+function slotRect(zone: ZoneDefinition, viewport: Viewport, slot: SlotId): Rect {
+  const area = zoneRect(viewport, zone.id);
+  if (zone.slotAxis === 'horizontal') {
+    const width = Math.min(ZONE_WIDTH_PX, area.width / zone.capacity);
+    return { ...area, x: area.x + slot * width, width };
+  }
+  const height = area.height / zone.capacity;
+  return { ...area, y: area.y + slot * height, height };
+}
+
+/** How far `value` lies outside [start, start + length]; 0 inside it. */
+function distanceToSpan(value: number, start: number, length: number): number {
+  return Math.max(start - value, 0, value - (start + length));
+}
+
+/**
+ * The slot the pointer points at: the slot rect it is over along the zone's slot axis, or the
+ * nearest one if it is past them all (lower slot on a tie).
+ */
+function slotUnderPointer(zone: ZoneDefinition, viewport: Viewport, pointer: Point): SlotId {
+  const distanceTo = (slot: SlotId) => {
+    const rect = slotRect(zone, viewport, slot);
+    return zone.slotAxis === 'vertical'
+      ? distanceToSpan(pointer.y, rect.y, rect.height)
+      : distanceToSpan(pointer.x, rect.x, rect.width);
+  };
+  return slotsOf(zone).reduce((best, slot) => (distanceTo(slot) < distanceTo(best) ? slot : best));
 }
 
 const SLOT_IDS = [0, 1] as const satisfies readonly SlotId[];
@@ -117,7 +144,8 @@ function zonesInReach(viewport: Viewport, pointer: Point): ZoneDefinition[] {
 /**
  * The zone and slot a release at `pointer` would dock `draggedId` into, or null.
  * Of the zones whose edge is within EDGE_TRIGGER_PX, the nearest one with a free slot wins
- * (a full zone is never a candidate). The slot follows the pointer, falling back to the free slot.
+ * (a full zone is never a candidate). The slot is the one under the pointer, falling back to
+ * the free slot.
  */
 export function dockTargetAt(
   layout: Layout,
@@ -127,7 +155,7 @@ export function dockTargetAt(
 ): DockTarget | null {
   for (const zone of zonesInReach(viewport, pointer)) {
     const taken = occupiedSlots(layout, zone.id, draggedId);
-    const slot = freeSlot(zone, taken, slotByPointerHalf(zone, viewport, pointer));
+    const slot = freeSlot(zone, taken, slotUnderPointer(zone, viewport, pointer));
     if (slot !== null) return { zone: zone.id, slot };
   }
   return null;
@@ -147,23 +175,13 @@ export function dockPanel(layout: Layout, panelId: PanelId, target: DockTarget):
 
 /**
  * The rect of a docked panel, derived from its zone and slot, or null if it is floating.
- * Column: a lone panel takes the full height, two split it evenly (slot 0 on top).
- * Bottom strip: slots sit side by side from the strip's left end, each half the strip
- * but capped at ZONE_WIDTH_PX.
+ * A lone panel in a column takes the full column height; otherwise each slot has its slotRect.
  */
 export function dockedRect(layout: Layout, viewport: Viewport, panelId: PanelId): Rect | null {
   const placement = layout.panels[panelId].placement;
   if (placement.kind !== 'docked') return null;
   const zone = zoneById(placement.zone);
-  const area = zoneRect(viewport, zone.id);
-
-  if (zone.slotAxis === 'horizontal') {
-    const width = Math.min(ZONE_WIDTH_PX, area.width / zone.capacity);
-    return { ...area, x: area.x + placement.slot * width, width };
-  }
-
   const alone = occupiedSlots(layout, zone.id, panelId).size === 0;
-  if (alone) return area;
-  const height = area.height / zone.capacity;
-  return { ...area, y: area.y + placement.slot * height, height };
+  if (zone.slotAxis === 'vertical' && alone) return zoneRect(viewport, zone.id);
+  return slotRect(zone, viewport, placement.slot);
 }
