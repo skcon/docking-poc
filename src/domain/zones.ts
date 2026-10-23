@@ -70,6 +70,11 @@ function slotsOf(zone: ZoneDefinition): readonly SlotId[] {
   return SLOT_IDS.slice(0, zone.capacity);
 }
 
+/** The slots the zone with this id offers, in order. */
+export function zoneSlots(zoneId: ZoneId): readonly SlotId[] {
+  return slotsOf(zoneById(zoneId));
+}
+
 /** The panels docked in a zone, keyed by slot, ignoring `exceptId` (e.g. the dragged panel). */
 function occupiedSlots(layout: Layout, zoneId: ZoneId, exceptId?: PanelId): Set<SlotId> {
   const slots = new Set<SlotId>();

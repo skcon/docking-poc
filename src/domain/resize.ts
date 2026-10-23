@@ -2,6 +2,7 @@
  * The resize lifecycle for floating panels: pure transitions `(session, viewport, event) => session`.
  * Docked panels are not resizable (spec #2), so starting a resize on one is a no-op.
  */
+import { clamp } from './clamp';
 import { HANDLE_HEIGHT_PX, MIN_PANEL } from './constants';
 import { floatingRectOf, withFloatingRect } from './panels';
 import { raisePanel } from './raise';
@@ -95,9 +96,4 @@ function resizedRect(
   }
   if (edge.includes('s')) bottom = Math.max(bottom + dy, top + MIN_PANEL.height);
   return { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-/** Clamp to [min, max]; `min` wins if the range is empty. */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(Math.min(value, max), min);
 }

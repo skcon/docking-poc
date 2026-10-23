@@ -17,7 +17,7 @@
 import { MIN_PANEL } from './constants';
 import { defaultLayout, PANEL_IDS } from './layout';
 import type { Layout, PanelId, PanelPlacement, PanelState, Rect, SlotId, ZoneId } from './types';
-import { ZONES } from './zones';
+import { ZONES, zoneSlots } from './zones';
 
 /** The schema version written into every encoded layout. Bump it (and migrate) on format changes. */
 export const LAYOUT_CODEC_VERSION = 1;
@@ -28,6 +28,13 @@ export const MAX_COORDINATE_PX = 100_000;
 const PANEL_SEPARATOR = '_';
 const FIELD_SEPARATOR = '~';
 const NULL_RECT = 'n';
+const RECT_FIELD_COUNT = 4;
+
+/** How each placement kind is written: its code and how many fields follow the code. */
+const PLACEMENT_CODES = {
+  floating: { code: 'f', fieldCount: RECT_FIELD_COUNT },
+  docked: { code: 'd', fieldCount: 2 },
+} as const satisfies Record<PanelPlacement['kind'], { code: string; fieldCount: number }>;
 
 export function encodeLayout(layout: Layout): string {
   const panels = layout.zOrder.map((id) => encodePanel(layout.panels[id]));
@@ -40,9 +47,10 @@ function encodePanel(panel: PanelState): string {
 }
 
 function encodePlacement(placement: PanelPlacement): string[] {
+  const { code } = PLACEMENT_CODES[placement.kind];
   return placement.kind === 'floating'
-    ? ['f', ...encodeRect(placement.rect)]
-    : ['d', placement.zone, String(placement.slot)];
+    ? [code, ...encodeRect(placement.rect)]
+    : [code, placement.zone, String(placement.slot)];
 }
 
 function encodeRect(rect: Rect): string[] {
@@ -66,27 +74,24 @@ function parseLayout(text: unknown): Layout | null {
     if (!panel || panels.has(panel.id)) return null;
     panels.set(panel.id, panel);
   }
-  const zOrder = [...panels.keys()];
+  if (!PANEL_IDS.every((id) => panels.has(id))) return null;
   if (!slotsAreUnique([...panels.values()])) return null;
-
-  const panelOf = (id: PanelId) => panels.get(id);
-  const counter = panelOf('counter');
-  const increment = panelOf('increment');
-  const decrement = panelOf('decrement');
-  if (!counter || !increment || !decrement) return null;
-  return { panels: { counter, increment, decrement }, zOrder };
+  // Checked above: the map holds exactly one panel per PanelId.
+  return { panels: Object.fromEntries(panels) as Layout['panels'], zOrder: [...panels.keys()] };
 }
 
 function parsePanel(encoded: string): PanelState | null {
-  const [id, kind, ...rest] = encoded.split(FIELD_SEPARATOR);
+  const [id, code, ...rest] = encoded.split(FIELD_SEPARATOR);
   if (!isPanelId(id)) return null;
+  const kind = placementKindOf(code);
+  if (!kind) return null;
 
-  const placementFieldCount = kind === 'f' ? 4 : kind === 'd' ? 2 : -1;
-  if (placementFieldCount < 0) return null;
-  const placementFields = rest.slice(0, placementFieldCount);
-  const lastFields = rest.slice(placementFieldCount);
+  const { fieldCount } = PLACEMENT_CODES[kind];
+  const placementFields = rest.slice(0, fieldCount);
+  const lastFields = rest.slice(fieldCount);
 
-  const placement = kind === 'f' ? parseFloating(placementFields) : parseDocked(placementFields);
+  const placement =
+    kind === 'floating' ? parseFloating(placementFields) : parseDocked(placementFields);
   if (!placement) return null;
 
   const lastIsNull = lastFields.length === 1 && lastFields[0] === NULL_RECT;
@@ -96,27 +101,28 @@ function parsePanel(encoded: string): PanelState | null {
   return { id, placement, lastFloatingRect };
 }
 
+function placementKindOf(code: string | undefined): PanelPlacement['kind'] | null {
+  if (code === PLACEMENT_CODES.floating.code) return 'floating';
+  if (code === PLACEMENT_CODES.docked.code) return 'docked';
+  return null;
+}
+
 function parseFloating(fields: string[]): PanelPlacement | null {
   const rect = parseRect(fields);
   return rect ? { kind: 'floating', rect } : null;
 }
 
 function parseDocked(fields: string[]): PanelPlacement | null {
-  const [zone, slot] = fields;
+  const [zone, encodedSlot] = fields;
   if (!isZoneId(zone)) return null;
-  if (slot !== '0' && slot !== '1') return null;
-  const slotId: SlotId = slot === '0' ? 0 : 1;
-  return { kind: 'docked', zone, slot: slotId };
+  const slot = zoneSlots(zone).find((id) => String(id) === encodedSlot);
+  return slot === undefined ? null : { kind: 'docked', zone, slot };
 }
 
 function parseRect(fields: string[]): Rect | null {
-  if (fields.length !== 4) return null;
-  const numbers = fields.map(parseCoordinate);
-  const [x, y, width, height] = numbers;
-  if (x === undefined || y === undefined || width === undefined || height === undefined) {
-    return null;
-  }
-  if (x === null || y === null || width === null || height === null) return null;
+  if (fields.length !== RECT_FIELD_COUNT) return null;
+  const [x, y, width, height] = fields.map(parseCoordinate);
+  if (x == null || y == null || width == null || height == null) return null;
   if (width < MIN_PANEL.width || height < MIN_PANEL.height) return null;
   return { x, y, width, height };
 }
@@ -128,13 +134,14 @@ function parseCoordinate(field: string): number | null {
   return Number.isFinite(value) && Math.abs(value) <= MAX_COORDINATE_PX ? value : null;
 }
 
+/** No two docked panels share a zone and slot. */
 function slotsAreUnique(panels: PanelState[]): boolean {
-  const taken = new Set<string>();
+  const taken = new Map<ZoneId, Set<SlotId>>();
   for (const { placement } of panels) {
     if (placement.kind !== 'docked') continue;
-    const key = `${placement.zone}${FIELD_SEPARATOR}${String(placement.slot)}`;
-    if (taken.has(key)) return false;
-    taken.add(key);
+    const slots = taken.get(placement.zone) ?? new Set<SlotId>();
+    if (slots.has(placement.slot)) return false;
+    taken.set(placement.zone, slots.add(placement.slot));
   }
   return true;
 }

@@ -1,10 +1,7 @@
+import { clamp } from './clamp';
 import { HANDLE_HEIGHT_PX } from './constants';
 import { floatingRectOf, withFloatingRect } from './panels';
 import type { Layout, PanelId, Point, Rect, Viewport } from './types';
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), Math.max(min, max));
-}
 
 /**
  * Shift `rect` (keeping its size) so its whole handle is on screen: within the window
