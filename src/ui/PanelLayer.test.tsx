@@ -208,3 +208,45 @@ describe('resizing floating panels', () => {
     expect(counter.style.left).toBe(`${600 - width}px`);
   });
 });
+
+describe('interrupted gestures', () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it('ends a drag when the handle loses pointer capture, restoring the panel', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const { left, top } = counter.style;
+    const handle = within(counter).getByTestId('handle');
+    fireEvent.pointerDown(handle, {
+      pointerId: 1,
+      button: 0,
+      clientX: parseFloat(left) + 10,
+      clientY: parseFloat(top) + 10,
+    });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10, clientY: 300 });
+    expect(screen.getByTestId('drop-highlight')).toBeInTheDocument();
+
+    fireEvent.lostPointerCapture(handle, { pointerId: 1 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 600, clientY: 400 });
+
+    expect(screen.queryByTestId('drop-highlight')).not.toBeInTheDocument();
+    expect(counter.style.left).toBe(left);
+    expect(counter.style.top).toBe(top);
+  });
+
+  it('restores the size when the browser cancels a resize', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const { width, height } = counter.style;
+    const corner = within(counter).getByTestId('resize-se');
+
+    fireEvent.pointerDown(corner, { pointerId: 1, button: 0, clientX: 500, clientY: 300 });
+    fireEvent.pointerMove(corner, { pointerId: 1, clientX: 560, clientY: 340 });
+    fireEvent.pointerCancel(corner, { pointerId: 1, clientX: 560, clientY: 340 });
+
+    expect(counter.style.width).toBe(width);
+    expect(counter.style.height).toBe(height);
+  });
+});

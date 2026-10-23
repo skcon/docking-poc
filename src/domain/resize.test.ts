@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultLayout } from './layout';
-import { resizeEnd, resizeMove, resizeStart } from './resize';
+import { resizeCancel, resizeEnd, resizeMove, resizeStart } from './resize';
 import type { Layout, PanelId, Point, Rect, ResizeEdge, Viewport } from './types';
 
 const viewport: Viewport = { width: 1280, height: 800, top: 40 };
@@ -189,5 +189,30 @@ describe('the resize lifecycle', () => {
       zone: 'left',
       slot: 0,
     });
+  });
+});
+
+describe('cancelling a resize', () => {
+  it('restores the layout from before the resize began, z-order included, and ends it', () => {
+    const layout: Layout = {
+      ...layoutWith('counter', start),
+      zOrder: ['counter', 'increment', 'decrement'],
+    };
+    const started = resizeStart({ layout, resize: null }, viewport, {
+      panelId: 'counter',
+      edge: 'se',
+      pointer: { x: 720, y: 440 },
+    });
+    const moved = resizeMove(started, viewport, { pointer: { x: 800, y: 500 } });
+
+    const cancelled = resizeCancel(moved);
+
+    expect(cancelled).toEqual({ layout, resize: null });
+  });
+
+  it('changes nothing when no resize is in progress', () => {
+    const session = { layout: layoutWith('counter', start), resize: null };
+
+    expect(resizeCancel(session)).toBe(session);
   });
 });

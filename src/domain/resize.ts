@@ -42,6 +42,7 @@ export function resizeStart(
     resize: {
       panelId: event.panelId,
       edge: event.edge,
+      startLayout: session.layout,
       startPointer: event.pointer,
       startRect: rect,
     },
@@ -69,6 +70,14 @@ export function resizeEnd(
   event: ResizeEndEvent,
 ): ResizeSession {
   return { layout: resizeMove(session, viewport, event).layout, resize: null };
+}
+
+/**
+ * The gesture was cancelled (pointercancel, or the edge lost pointer capture): restore the
+ * layout from before the resize began and end the resize.
+ */
+export function resizeCancel(session: ResizeSession): ResizeSession {
+  return session.resize ? { layout: session.resize.startLayout, resize: null } : session;
 }
 
 /**

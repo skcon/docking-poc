@@ -1,8 +1,8 @@
-import { useId, type PointerEvent, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { HANDLE_HEIGHT_PX, type PanelId, type PanelState, type Rect } from '../domain';
 import { useAppStore } from '../state/store';
 import { ResizeEdges } from './ResizeEdges';
-import { currentViewport, pointerOf } from './viewport';
+import { usePointerGesture } from './pointerGesture';
 
 type PanelProps = {
   panel: PanelState;
@@ -39,34 +39,23 @@ export function Panel({ panel, title, zIndex, dockedRect, children }: PanelProps
 
 type HandleProps = { id: string; panelId: PanelId; title: string };
 
-/** Dragging the handle moves the panel. Pointer capture keeps the drag on the handle. */
+/** Dragging the handle moves the panel (undocking it if docked). */
 function Handle({ id, panelId, title }: HandleProps) {
   const startDrag = useAppStore((s) => s.startDrag);
-  const moveDrag = useAppStore((s) => s.moveDrag);
-  const endDrag = useAppStore((s) => s.endDrag);
-  const isDragging = useAppStore((s) => s.drag?.panelId === panelId);
-
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    startDrag(panelId, pointerOf(event), currentViewport());
-  };
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (isDragging) moveDrag(pointerOf(event), currentViewport());
-  };
-  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
-    if (isDragging) endDrag(pointerOf(event), currentViewport());
-  };
+  const handlers = usePointerGesture({
+    active: useAppStore((s) => s.drag?.panelId === panelId),
+    start: (pointer, viewport) => startDrag(panelId, pointer, viewport),
+    move: useAppStore((s) => s.moveDrag),
+    end: useAppStore((s) => s.endDrag),
+    cancel: useAppStore((s) => s.cancelDrag),
+  });
 
   return (
     <div
       data-testid="handle"
       className="flex shrink-0 cursor-grab touch-none items-center bg-slate-700 px-3 text-sm font-medium text-white select-none active:cursor-grabbing"
       style={{ height: HANDLE_HEIGHT_PX }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      {...handlers}
     >
       <h2 id={id}>{title}</h2>
     </div>

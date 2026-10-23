@@ -1,7 +1,6 @@
-import type { PointerEvent } from 'react';
 import { RESIZE_EDGES, type PanelId, type ResizeEdge } from '../domain';
 import { useAppStore } from '../state/store';
-import { currentViewport, pointerOf } from './viewport';
+import { usePointerGesture } from './pointerGesture';
 
 /** Where each invisible resize strip sits on the panel, and its cursor. Presentation only. */
 const EDGE_CLASSES: Record<ResizeEdge, string> = {
@@ -22,35 +21,24 @@ export function ResizeEdges({ panelId }: { panelId: PanelId }) {
 
 type ResizeEdgeStripProps = { panelId: PanelId; edge: ResizeEdge };
 
-/** Pointer capture keeps the resize on this strip while the pointer moves outside it. */
 function ResizeEdgeStrip({ panelId, edge }: ResizeEdgeStripProps) {
   const startResize = useAppStore((s) => s.startResize);
-  const moveResize = useAppStore((s) => s.moveResize);
-  const endResize = useAppStore((s) => s.endResize);
-  const isResizing = useAppStore((s) => s.resize?.panelId === panelId && s.resize.edge === edge);
-
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    startResize(panelId, edge, pointerOf(event), currentViewport());
-  };
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (isResizing) moveResize(pointerOf(event), currentViewport());
-  };
-  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
-    if (isResizing) endResize(pointerOf(event), currentViewport());
-  };
+  const handlers = usePointerGesture({
+    active: useAppStore((s) => s.resize?.panelId === panelId && s.resize.edge === edge),
+    start: (pointer, viewport) => startResize(panelId, edge, pointer, viewport),
+    move: useAppStore((s) => s.moveResize),
+    end: useAppStore((s) => s.endResize),
+    cancel: useAppStore((s) => s.cancelResize),
+    // The resize raises the panel itself; the panel's own raise must not run too.
+    stopPropagation: true,
+  });
 
   return (
     <div
       data-testid={`resize-${edge}`}
       aria-hidden="true"
       className={`absolute z-10 touch-none ${EDGE_CLASSES[edge]}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      {...handlers}
     />
   );
 }

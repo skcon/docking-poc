@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dockedRectDuringDrag, dragEnd, dragMove, dragStart } from './drag';
+import { dockedRectDuringDrag, dragCancel, dragEnd, dragMove, dragStart } from './drag';
 import { defaultLayout } from './layout';
 import type { Layout, PanelId, Rect, Viewport } from './types';
 
@@ -380,5 +380,33 @@ describe('the drag threshold', () => {
     const within = dragMove(started, viewport, { pointer: { x: 413, y: 110 } });
 
     expect(rectOf(within.layout, 'counter')).toEqual({ x: 400, y: 100, width: 320, height: 240 });
+  });
+});
+
+describe('cancelling a handle drag', () => {
+  it('restores the layout from before the drag began and ends it, docking nothing', () => {
+    const layout = defaultLayout();
+    const docked: Layout = {
+      ...layout,
+      panels: {
+        ...layout.panels,
+        counter: { ...layout.panels.counter, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+      },
+    };
+    const started = dragStart({ layout: docked, drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 100, y: 50 },
+    });
+    // Undocked and hovering the right zone.
+    const moved = dragMove(started, viewport, { pointer: { x: 1270, y: 300 } });
+    expect(moved.drag?.dockTarget).not.toBeNull();
+
+    expect(dragCancel(moved)).toEqual({ layout: docked, drag: null });
+  });
+
+  it('changes nothing when no drag is in progress', () => {
+    const session = { layout: defaultLayout(), drag: null };
+
+    expect(dragCancel(session)).toBe(session);
   });
 });

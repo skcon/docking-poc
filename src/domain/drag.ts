@@ -42,6 +42,7 @@ export function dragStart(
     layout,
     drag: {
       panelId: event.panelId,
+      startLayout: session.layout,
       startPointer: event.pointer,
       moved: false,
       grabOffset: { x: event.pointer.x - rect.x, y: event.pointer.y - rect.y },
@@ -113,6 +114,14 @@ export function dragEnd(
   const moved = dragMove(session, viewport, event);
   if (!moved.drag?.dockTarget) return { layout: moved.layout, drag: null };
   return { layout: dockPanel(moved.layout, moved.drag.panelId, moved.drag.dockTarget), drag: null };
+}
+
+/**
+ * The gesture was cancelled (pointercancel, or the handle lost pointer capture): restore the
+ * layout from before the drag began and end the drag, docking nothing.
+ */
+export function dragCancel(session: DragSession): DragSession {
+  return session.drag ? { layout: session.drag.startLayout, drag: null } : session;
 }
 
 /**

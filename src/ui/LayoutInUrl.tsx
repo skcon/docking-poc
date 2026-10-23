@@ -1,16 +1,9 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { encodeLayout } from '../domain';
-import { useAppStore, type AppState } from '../state/store';
+import { useAppStore } from '../state/store';
+import { shouldWriteLayoutToUrl } from '../state/urlCommit';
 import { currentViewport } from './viewport';
-
-/** A drag (not a click) or resize just ended: the points where the layout is written to the URL. */
-function interactionEnded(state: AppState, previous: AppState): boolean {
-  return (
-    (previous.drag?.moved === true && state.drag === null) ||
-    (previous.resize !== null && state.resize === null)
-  );
-}
 
 /**
  * Keeps the layout in the `layout` search param. Loads it from the URL on open (and when the
@@ -31,7 +24,7 @@ export function LayoutInUrl() {
   useEffect(
     () =>
       useAppStore.subscribe((state, previous) => {
-        if (!interactionEnded(state, previous)) return;
+        if (!shouldWriteLayoutToUrl(state, previous)) return;
         const layout = encodeLayout(state.layout);
         lastWritten.current = layout;
         void navigate({ to: '.', search: (prev) => ({ ...prev, layout }), replace: true });

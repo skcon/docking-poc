@@ -33,6 +33,7 @@ export type DockTarget = { zone: ZoneId; slot: SlotId };
 
 /**
  * The in-progress handle drag. Transient: never persisted or put in the URL.
+ * `startLayout` is the layout before the drag began (restored if the drag is cancelled).
  * `startPointer` is where the handle was pressed. Until the pointer has moved more than
  * DRAG_THRESHOLD_PX from it, `moved` is false: nothing moves or undocks, and a release is a click.
  * `grabOffset` is the pointer's offset from the dragged panel's top-left.
@@ -43,6 +44,7 @@ export type DockTarget = { zone: ZoneId; slot: SlotId };
  */
 export type DragState = {
   panelId: PanelId;
+  startLayout: Layout;
   startPointer: Point;
   moved: boolean;
   grabOffset: Point;
@@ -66,10 +68,12 @@ export type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 /**
  * The in-progress resize. Transient: never persisted or put in the URL.
  * `startPointer` and `startRect` are the pointer and the panel's rect when the resize began.
+ * `startLayout` is the layout before the resize began (restored if the resize is cancelled).
  */
 export type ResizeState = {
   panelId: PanelId;
   edge: ResizeEdge;
+  startLayout: Layout;
   startPointer: Point;
   startRect: Rect;
 } | null;

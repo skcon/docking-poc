@@ -3,11 +3,13 @@ import {
   clampToViewport,
   decodeLayout,
   defaultLayout,
+  dragCancel,
   dragEnd,
   dragMove,
   dragStart,
   encodeLayout,
   raisePanel,
+  resizeCancel,
   resizeEnd,
   resizeMove,
   resizeStart,
@@ -40,14 +42,18 @@ export type AppActions = {
   startDrag: (panelId: PanelId, pointer: Point, viewport: Viewport) => void;
   /** Pointer move while a handle is captured. */
   moveDrag: (pointer: Point, viewport: Viewport) => void;
-  /** Pointer up or cancel on a captured handle. */
+  /** Pointer up on a captured handle. */
   endDrag: (pointer: Point, viewport: Viewport) => void;
+  /** Pointer cancel or lost capture on a handle: undo the drag. No-op without a drag. */
+  cancelDrag: () => void;
   /** Pointer-down on a floating panel's resize edge or corner. */
   startResize: (panelId: PanelId, edge: ResizeEdge, pointer: Point, viewport: Viewport) => void;
   /** Pointer move while a resize edge is captured. */
   moveResize: (pointer: Point, viewport: Viewport) => void;
-  /** Pointer up or cancel on a captured resize edge. */
+  /** Pointer up on a captured resize edge. */
   endResize: (pointer: Point, viewport: Viewport) => void;
+  /** Pointer cancel or lost capture on a resize edge: undo the resize. No-op without one. */
+  cancelResize: () => void;
   /** The browser window changed size: pull floating panels back into view. */
   changeViewport: (viewport: Viewport) => void;
   /**
@@ -80,11 +86,13 @@ export const useAppStore = create<AppStore>()((set) => ({
     set((s) => dragStart(dragSession(s), viewport, { panelId, pointer })),
   moveDrag: (pointer, viewport) => set((s) => dragMove(dragSession(s), viewport, { pointer })),
   endDrag: (pointer, viewport) => set((s) => dragEnd(dragSession(s), viewport, { pointer })),
+  cancelDrag: () => set((s) => dragCancel(dragSession(s))),
   startResize: (panelId, edge, pointer, viewport) =>
     set((s) => resizeStart(resizeSession(s), viewport, { panelId, edge, pointer })),
   moveResize: (pointer, viewport) =>
     set((s) => resizeMove(resizeSession(s), viewport, { pointer })),
   endResize: (pointer, viewport) => set((s) => resizeEnd(resizeSession(s), viewport, { pointer })),
+  cancelResize: () => set((s) => resizeCancel(resizeSession(s))),
   changeViewport: (viewport) => set((s) => ({ layout: clampToViewport(s.layout, viewport) })),
   loadLayout: (encoded, viewport) =>
     set((s) =>

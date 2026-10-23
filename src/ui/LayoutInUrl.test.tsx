@@ -140,4 +140,26 @@ describe('layout in the URL', () => {
     await settle();
     expect(layoutParam(router)).toBeNull();
   });
+
+  it('restores the panel and writes nothing when the browser cancels a drag', async () => {
+    const { router } = renderAt('/');
+    const counter = await screen.findByRole('region', { name: 'Counter' });
+    const { left, top } = counter.style;
+    const handle = within(counter).getByTestId('handle');
+
+    fireEvent.pointerDown(handle, {
+      pointerId: 1,
+      button: 0,
+      clientX: parseFloat(left) + 10,
+      clientY: parseFloat(top) + 10,
+    });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10, clientY: 300 });
+    fireEvent.pointerCancel(handle, { pointerId: 1, clientX: 10, clientY: 300 });
+
+    expect(counter).toHaveAttribute('data-placement', 'floating');
+    expect(counter.style.left).toBe(left);
+    expect(counter.style.top).toBe(top);
+    await settle();
+    expect(layoutParam(router)).toBeNull();
+  });
 });
