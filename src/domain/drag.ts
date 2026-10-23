@@ -4,11 +4,13 @@
  * This module only orchestrates; each concern lives in its own module:
  * - move.ts: moving a floating panel and clamping its handle on screen
  * - raise.ts: z-order
+ * - zones.ts: drop target and docking
  * Extension points for later tickets are marked below.
  */
 import { moveFloatingPanel } from './move';
 import { floatingRectOf } from './panels';
 import { raisePanel } from './raise';
+import { dockPanel, dropTargetAt } from './zones';
 import type { DragEndEvent, DragMoveEvent, DragSession, DragStartEvent, Viewport } from './types';
 
 /** Pointer-down on a panel's handle: raise the panel and remember where it was grabbed. */
@@ -45,18 +47,17 @@ export function dragMove(
     y: event.pointer.y - drag.grabOffset.y,
   };
   const layout = moveFloatingPanel(session.layout, viewport, drag.panelId, topLeft);
-  // Extension point (#6 drop highlight): set drag.dropTarget from
-  // dropTargetAt(layout, viewport, event.pointer, drag.panelId).
-  return { layout, drag };
+  const dropTarget = dropTargetAt(layout, viewport, event.pointer, drag.panelId);
+  return { layout, drag: { ...drag, dropTarget } };
 }
 
-/** Pointer release: apply the final position and end the drag. */
+/** Pointer release: dock into the drop target if there is one, else float at the final position. */
 export function dragEnd(
   session: DragSession,
   viewport: Viewport,
   event: DragEndEvent,
 ): DragSession {
   const moved = dragMove(session, viewport, event);
-  // Extension point (#6 dock): if the drag has a dropTarget, dock the panel there instead.
-  return { layout: moved.layout, drag: null };
+  if (!moved.drag?.dropTarget) return { layout: moved.layout, drag: null };
+  return { layout: dockPanel(moved.layout, moved.drag.panelId, moved.drag.dropTarget), drag: null };
 }

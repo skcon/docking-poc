@@ -5,3 +5,4 @@ export * from './move';
 export * from './panels';
 export * from './raise';
 export type * from './types';
+export * from './zones';

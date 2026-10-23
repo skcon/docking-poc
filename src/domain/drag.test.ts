@@ -99,3 +99,57 @@ describe('releasing a handle drag', () => {
     expect(rectOf(after.layout, 'counter')).toEqual({ x: 400, y: 100, width: 320, height: 240 });
   });
 });
+
+describe('docking by dragging to an edge', () => {
+  function startDragging() {
+    const layout = layoutWith('counter', { x: 400, y: 100, width: 320, height: 240 });
+    return dragStart({ layout, drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 410, y: 110 },
+    });
+  }
+
+  it('shows the drop target while the pointer is near an edge, and clears it when it leaves', () => {
+    const nearLeft = dragMove(startDragging(), viewport, { pointer: { x: 20, y: 600 } });
+    expect(nearLeft.drag?.dropTarget).toEqual({ zone: 'left', slot: 1 });
+
+    const away = dragMove(nearLeft, viewport, { pointer: { x: 600, y: 400 } });
+    expect(away.drag?.dropTarget).toBeNull();
+  });
+
+  it('docks the panel into the target slot when released there', () => {
+    const ended = dragEnd(startDragging(), viewport, { pointer: { x: 1270, y: 100 } });
+
+    expect(ended.layout.panels.counter.placement).toEqual({
+      kind: 'docked',
+      zone: 'right',
+      slot: 0,
+    });
+    expect(ended.drag).toBeNull();
+  });
+
+  it('keeps the panel floating when released away from every edge', () => {
+    const ended = dragEnd(startDragging(), viewport, { pointer: { x: 600, y: 400 } });
+
+    expect(ended.layout.panels.counter.placement.kind).toBe('floating');
+  });
+
+  it('keeps the panel floating when released over a full zone', () => {
+    const started = startDragging();
+    const { panels } = started.layout;
+    const leftFull: Layout = {
+      ...started.layout,
+      panels: {
+        ...panels,
+        increment: { ...panels.increment, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+        decrement: { ...panels.decrement, placement: { kind: 'docked', zone: 'left', slot: 1 } },
+      },
+    };
+
+    const ended = dragEnd({ ...started, layout: leftFull }, viewport, {
+      pointer: { x: 10, y: 300 },
+    });
+
+    expect(ended.layout.panels.counter.placement.kind).toBe('floating');
+  });
+});

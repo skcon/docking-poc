@@ -1,5 +1,5 @@
 import { useId, type PointerEvent, type ReactNode } from 'react';
-import { HANDLE_HEIGHT_PX, type PanelId, type PanelState } from '../domain';
+import { HANDLE_HEIGHT_PX, type PanelId, type PanelState, type Rect } from '../domain';
 import { useAppStore } from '../state/store';
 import { currentViewport, pointerOf } from './viewport';
 
@@ -7,19 +7,23 @@ type PanelProps = {
   panel: PanelState;
   title: string;
   zIndex: number;
+  /** Where the zone lays this panel out when it is docked (from the domain's dockedRect). */
+  dockedRect?: Rect | null;
   children: ReactNode;
 };
 
-export function Panel({ panel, title, zIndex, children }: PanelProps) {
+export function Panel({ panel, title, zIndex, dockedRect, children }: PanelProps) {
   const titleId = useId();
   const raisePanel = useAppStore((s) => s.raisePanel);
-  if (panel.placement.kind !== 'floating') return null;
-  const { x, y, width, height } = panel.placement.rect;
+  const rect = panel.placement.kind === 'floating' ? panel.placement.rect : dockedRect;
+  if (!rect) return null;
+  const { x, y, width, height } = rect;
 
   return (
     <section
       aria-labelledby={titleId}
       data-panel-id={panel.id}
+      data-placement={panel.placement.kind}
       className="absolute flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white shadow-lg"
       style={{ left: x, top: y, width, height, zIndex }}
       onPointerDown={() => raisePanel(panel.id)}
