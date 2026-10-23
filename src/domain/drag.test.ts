@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dragEnd, dragMove, dragStart } from './drag';
+import { dockedRectDuringDrag, dragEnd, dragMove, dragStart } from './drag';
 import { defaultLayout } from './layout';
 import type { Layout, PanelId, Rect, Viewport } from './types';
 
@@ -252,6 +252,30 @@ describe('undocking by dragging a docked panel’s handle', () => {
       kind: 'docked',
       zone: 'left',
       slot: 1,
+    });
+  });
+
+  it('keeps the remaining panel’s rect while the drag is in progress, then lets it fill the column', () => {
+    const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 100, y: 50 },
+    });
+    const moved = dragMove(started, viewport, { pointer: { x: 640, y: 400 } });
+
+    // The bottom half of the left column, as before the drag.
+    expect(dockedRectDuringDrag(moved, viewport, 'increment')).toEqual({
+      x: 0,
+      y: 420,
+      width: 350,
+      height: 380,
+    });
+
+    const ended = dragEnd(moved, viewport, { pointer: { x: 640, y: 400 } });
+    expect(dockedRectDuringDrag(ended, viewport, 'increment')).toEqual({
+      x: 0,
+      y: 40,
+      width: 350,
+      height: 760,
     });
   });
 

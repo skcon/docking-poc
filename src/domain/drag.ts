@@ -20,7 +20,9 @@ import type {
   DragSession,
   DragStartEvent,
   Layout,
+  PanelId,
   Point,
+  Rect,
   Viewport,
 } from './types';
 
@@ -44,6 +46,7 @@ export function dragStart(
       moved: false,
       grabOffset: { x: event.pointer.x - rect.x, y: event.pointer.y - rect.y },
       dockTarget: null,
+      originSlot: null,
     },
   };
 }
@@ -84,9 +87,18 @@ function beginMoving(
   viewport: Viewport,
   drag: ActiveDrag,
 ): { layout: Layout; drag: ActiveDrag } {
+  const placement = layout.panels[drag.panelId].placement;
   const floated = undockPanel(layout, viewport, drag.panelId, drag.startPointer);
-  if (!floated) return { layout, drag: { ...drag, moved: true } };
-  return { layout: floated.layout, drag: { ...drag, moved: true, grabOffset: floated.grabOffset } };
+  if (!floated || placement.kind !== 'docked') return { layout, drag: { ...drag, moved: true } };
+  return {
+    layout: floated.layout,
+    drag: {
+      ...drag,
+      moved: true,
+      grabOffset: floated.grabOffset,
+      originSlot: { zone: placement.zone, slot: placement.slot },
+    },
+  };
 }
 
 /**
@@ -101,4 +113,17 @@ export function dragEnd(
   const moved = dragMove(session, viewport, event);
   if (!moved.drag?.dockTarget) return { layout: moved.layout, drag: null };
   return { layout: dockPanel(moved.layout, moved.drag.panelId, moved.drag.dockTarget), drag: null };
+}
+
+/**
+ * A docked panel's rect while `session`'s drag is in progress: the slot the dragged panel was
+ * undocked from still counts as occupied, so the other panels in that zone keep their rects
+ * until the drag ends. With no drag in progress this is dockedRect.
+ */
+export function dockedRectDuringDrag(
+  session: DragSession,
+  viewport: Viewport,
+  panelId: PanelId,
+): Rect | null {
+  return dockedRect(session.layout, viewport, panelId, session.drag?.originSlot ?? null);
 }

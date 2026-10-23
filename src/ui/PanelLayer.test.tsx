@@ -136,6 +136,28 @@ describe('undocking panels', () => {
     expect(counter.style.left).toBe(`${500 - 32}px`);
     expect(counter.style.top).toBe('290px');
   });
+
+  it('keeps the neighbour in its half of the column until the dragged panel is released', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const increment = panel('Increment');
+    const grabOf = (el: HTMLElement) => ({
+      x: parseFloat(el.style.left) + 10,
+      y: parseFloat(el.style.top) + 10,
+    });
+    dragHandle('Counter', grabOf(counter), { x: 10, y: 100 });
+    dragHandle('Increment', grabOf(increment), { x: 10, y: 700 });
+    const half = `${(768 - 40) / 2}px`;
+    expect(increment.style.height).toBe(half);
+
+    const handle = within(counter).getByTestId('handle');
+    fireEvent.pointerDown(handle, { pointerId: 1, button: 0, clientX: 100, clientY: 50 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 600, clientY: 300 });
+    expect(increment.style.height).toBe(half);
+
+    fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: 600, clientY: 300 });
+    expect(increment.style.height).toBe(`${768 - 40}px`);
+  });
 });
 
 describe('resizing floating panels', () => {

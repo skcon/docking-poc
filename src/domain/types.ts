@@ -37,6 +37,9 @@ export type DockTarget = { zone: ZoneId; slot: SlotId };
  * DRAG_THRESHOLD_PX from it, `moved` is false: nothing moves or undocks, and a release is a click.
  * `grabOffset` is the pointer's offset from the dragged panel's top-left.
  * `dockTarget` is where a release would dock the panel (shown by the drop highlight), or null.
+ * `originSlot` is the slot a docked panel was undocked from in this drag: until the drag ends it
+ * still counts as occupied for the geometry of the other panels in that zone (they keep their
+ * rects), though the dragged panel may dock back into it.
  */
 export type DragState = {
   panelId: PanelId;
@@ -44,6 +47,7 @@ export type DragState = {
   moved: boolean;
   grabOffset: Point;
   dockTarget: DockTarget | null;
+  originSlot: DockTarget | null;
 } | null;
 
 /** A drag that is in progress. */

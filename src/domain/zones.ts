@@ -176,12 +176,19 @@ export function dockPanel(layout: Layout, panelId: PanelId, target: DockTarget):
 /**
  * The rect of a docked panel, derived from its zone and slot, or null if it is floating.
  * A lone panel in a column takes the full column height; otherwise each slot has its slotRect.
+ * `heldSlot` (e.g. the slot a dragged panel left) counts as occupied when deciding that.
  */
-export function dockedRect(layout: Layout, viewport: Viewport, panelId: PanelId): Rect | null {
+export function dockedRect(
+  layout: Layout,
+  viewport: Viewport,
+  panelId: PanelId,
+  heldSlot: DockTarget | null = null,
+): Rect | null {
   const placement = layout.panels[panelId].placement;
   if (placement.kind !== 'docked') return null;
   const zone = zoneById(placement.zone);
-  const alone = occupiedSlots(layout, zone.id, panelId).size === 0;
-  if (zone.slotAxis === 'vertical' && alone) return zoneRect(viewport, zone.id);
+  const occupied = occupiedSlots(layout, zone.id, panelId);
+  if (heldSlot?.zone === zone.id && heldSlot.slot !== placement.slot) occupied.add(heldSlot.slot);
+  if (zone.slotAxis === 'vertical' && occupied.size === 0) return zoneRect(viewport, zone.id);
   return slotRect(zone, viewport, placement.slot);
 }
