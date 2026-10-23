@@ -1,7 +1,7 @@
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppRouter } from '../router';
 import { resetStore } from '../state/store';
 
@@ -161,5 +161,17 @@ describe('layout in the URL', () => {
     expect(counter.style.top).toBe(top);
     await settle();
     expect(layoutParam(router)).toBeNull();
+  });
+
+  it('writes the new z-order once when a click raises a panel', async () => {
+    const { router } = renderAt('/');
+    const counter = await screen.findByRole('region', { name: 'Counter' });
+    const navigate = vi.spyOn(router, 'navigate');
+
+    fireEvent.pointerDown(within(counter).getByRole('status'), { pointerId: 1, button: 0 });
+    fireEvent.pointerUp(within(counter).getByRole('status'), { pointerId: 1, button: 0 });
+
+    await expect.poll(() => layoutParam(router)).toMatch(/^v1_increment~.*_decrement~.*_counter~/);
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 });

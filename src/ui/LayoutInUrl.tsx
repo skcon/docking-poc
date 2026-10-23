@@ -7,8 +7,8 @@ import { currentViewport } from './viewport';
 
 /**
  * Keeps the layout in the `layout` search param. Loads it from the URL on open (and when the
- * URL changes from outside), and writes it once per drop, move end or resize end with replace
- * navigation, so history is not flooded. Renders nothing.
+ * URL changes from outside), and writes it with replace navigation (so history is not flooded)
+ * whenever the store says a change is a commit point (state/urlCommit.ts). Renders nothing.
  */
 export function LayoutInUrl() {
   const { layout: encoded } = useSearch({ from: '__root__' });
