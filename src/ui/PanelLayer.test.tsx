@@ -115,6 +115,29 @@ describe('docking panels', () => {
   });
 });
 
+describe('undocking panels', () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it('undocks a docked panel when its handle is dragged, floating it under the pointer', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const grab = { x: parseFloat(counter.style.left) + 10, y: parseFloat(counter.style.top) + 10 };
+    dragHandle('Counter', grab, { x: 1014, y: 300 });
+    expect(counter).toHaveAttribute('data-placement', 'docked');
+
+    // Grab the 350 px docked handle 35 px in (a tenth), then drag it into the middle.
+    dragHandle('Counter', { x: 1024 - 350 + 35, y: 50 }, { x: 500, y: 300 });
+
+    expect(counter).toHaveAttribute('data-placement', 'floating');
+    expect(counter.style.width).toBe('320px');
+    // A tenth along the 320 px floating handle.
+    expect(counter.style.left).toBe(`${500 - 32}px`);
+    expect(counter.style.top).toBe('290px');
+  });
+});
+
 describe('resizing floating panels', () => {
   const initialWidth = window.innerWidth;
 

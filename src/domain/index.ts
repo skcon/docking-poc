@@ -8,3 +8,4 @@ export * from './resize';
 export * from './viewport';
 export type * from './types';
 export * from './zones';
+export * from './undock';

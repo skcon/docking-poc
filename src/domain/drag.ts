@@ -5,24 +5,33 @@
  * - move.ts: moving a floating panel and clamping its handle on screen
  * - raise.ts: z-order
  * - zones.ts: drop target and docking
- * Extension points for later tickets are marked below.
+ * - undock.ts: floating a docked panel under the pointer
  */
 import { moveFloatingPanel } from './move';
 import { floatingRectOf } from './panels';
 import { raisePanel } from './raise';
+import { undockPanel } from './undock';
 import { dockPanel, dropTargetAt } from './zones';
 import type { DragEndEvent, DragMoveEvent, DragSession, DragStartEvent, Viewport } from './types';
 
-/** Pointer-down on a panel's handle: raise the panel and remember where it was grabbed. */
+/**
+ * Pointer-down on a panel's handle: raise the panel and remember where it was grabbed.
+ * A docked panel is undocked first, floating under the pointer (undock.ts).
+ */
 export function dragStart(
   session: DragSession,
-  _viewport: Viewport,
+  viewport: Viewport,
   event: DragStartEvent,
 ): DragSession {
   const layout = raisePanel(session.layout, event.panelId);
+  const undocked = undockPanel(layout, viewport, event.panelId, event.pointer);
+  if (undocked) {
+    return {
+      layout: undocked.layout,
+      drag: { panelId: event.panelId, grabOffset: undocked.grabOffset, dropTarget: null },
+    };
+  }
   const rect = floatingRectOf(layout, event.panelId);
-  // Extension point (#7 undock): a docked panel has no floating rect here. Undocking derives
-  // its grab offset from dockedRect() and floats it at lastFloatingRect ?? DEFAULT_FLOATING.
   if (!rect) return { layout, drag: null };
   return {
     layout,

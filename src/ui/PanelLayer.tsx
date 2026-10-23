@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dockedRect, PANEL_TITLES } from '../domain';
+import { dockedRect, PANEL_IDS, PANEL_TITLES } from '../domain';
 import { useAppStore } from '../state/store';
 import { DropHighlight } from './DropHighlight';
 import { Panel } from './Panel';
@@ -19,7 +19,10 @@ export function PanelLayer() {
 
   return (
     <div className="pointer-events-none fixed inset-0 *:pointer-events-auto">
-      {layout.zOrder.map((id, index) => {
+      {/* Stable DOM order (PANEL_IDS), stacked by zIndex: reordering DOM nodes would release
+          the handle's pointer capture when a drag raises (or undocks) its panel. */}
+      {PANEL_IDS.map((id) => {
+        const index = layout.zOrder.indexOf(id);
         const Content = PANEL_CONTENTS[id];
         const docked = layout.panels[id].placement.kind === 'docked';
         return (
