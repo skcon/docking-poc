@@ -24,3 +24,24 @@ export type Layout = {
   /** Back to front. */
   zOrder: PanelId[];
 };
+
+/** A position in window coordinates (CSS px), e.g. a pointer. */
+export type Point = { x: number; y: number };
+
+/**
+ * The in-progress handle drag. Transient: never persisted or put in the URL.
+ * `grabOffset` is the pointer's offset from the dragged panel's top-left when the drag began.
+ * `dropTarget` is the zone and slot a release would dock into (set by drop-target logic, #6).
+ */
+export type DragState = {
+  panelId: PanelId;
+  grabOffset: Point;
+  dropTarget: { zone: ZoneId; slot: SlotId } | null;
+} | null;
+
+/** What the drag lifecycle transitions read and return: the layout plus the transient drag. */
+export type DragSession = { layout: Layout; drag: DragState };
+
+export type DragStartEvent = { panelId: PanelId; pointer: Point };
+export type DragMoveEvent = { pointer: Point };
+export type DragEndEvent = { pointer: Point };

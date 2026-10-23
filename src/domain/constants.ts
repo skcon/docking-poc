@@ -24,3 +24,6 @@ export const DEFAULT_FLOATING_ORIGIN = {
 
 /** Offset between consecutive default floating panels so none hides another. */
 export const DEFAULT_FLOATING_STAGGER = { x: 40, y: 40 } as const;
+
+/** Height of a panel's handle. Handle clamping keeps this strip on screen. */
+export const HANDLE_HEIGHT_PX = 32;

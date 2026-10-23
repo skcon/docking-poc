@@ -1,5 +1,7 @@
-import { useId, type ReactNode } from 'react';
-import type { PanelState } from '../domain';
+import { useId, type PointerEvent, type ReactNode } from 'react';
+import { HANDLE_HEIGHT_PX, type PanelId, type PanelState } from '../domain';
+import { useAppStore } from '../state/store';
+import { currentViewport, pointerOf } from './viewport';
 
 type PanelProps = {
   panel: PanelState;
@@ -10,6 +12,7 @@ type PanelProps = {
 
 export function Panel({ panel, title, zIndex, children }: PanelProps) {
   const titleId = useId();
+  const raisePanel = useAppStore((s) => s.raisePanel);
   if (panel.placement.kind !== 'floating') return null;
   const { x, y, width, height } = panel.placement.rect;
 
@@ -19,18 +22,44 @@ export function Panel({ panel, title, zIndex, children }: PanelProps) {
       data-panel-id={panel.id}
       className="absolute flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white shadow-lg"
       style={{ left: x, top: y, width, height, zIndex }}
+      onPointerDown={() => raisePanel(panel.id)}
     >
-      <Handle id={titleId} title={title} />
+      <Handle id={titleId} panelId={panel.id} title={title} />
       <div className="flex flex-1 items-center justify-center p-4">{children}</div>
     </section>
   );
 }
 
-function Handle({ id, title }: { id: string; title: string }) {
+type HandleProps = { id: string; panelId: PanelId; title: string };
+
+/** Dragging the handle moves the panel. Pointer capture keeps the drag on the handle. */
+function Handle({ id, panelId, title }: HandleProps) {
+  const startDrag = useAppStore((s) => s.startDrag);
+  const moveDrag = useAppStore((s) => s.moveDrag);
+  const endDrag = useAppStore((s) => s.endDrag);
+  const isDragging = useAppStore((s) => s.drag?.panelId === panelId);
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    startDrag(panelId, pointerOf(event), currentViewport());
+  };
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (isDragging) moveDrag(pointerOf(event), currentViewport());
+  };
+  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (isDragging) endDrag(pointerOf(event), currentViewport());
+  };
+
   return (
     <div
       data-testid="handle"
-      className="flex h-8 shrink-0 cursor-grab items-center bg-slate-700 px-3 text-sm font-medium text-white select-none"
+      className="flex shrink-0 cursor-grab touch-none items-center bg-slate-700 px-3 text-sm font-medium text-white select-none active:cursor-grabbing"
+      style={{ height: HANDLE_HEIGHT_PX }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd}
     >
       <h2 id={id}>{title}</h2>
     </div>
