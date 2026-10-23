@@ -102,25 +102,22 @@ function distanceToEdge(edge: ZoneEdge, viewport: Viewport, pointer: Point): num
   }
 }
 
-/** The zone whose edge is nearest the pointer and within reach, or null. Never over the action bar. */
-function nearestZoneInReach(viewport: Viewport, pointer: Point): ZoneDefinition | null {
-  if (pointer.y < viewport.top) return null;
-  let nearest: ZoneDefinition | null = null;
-  let nearestDistance = EDGE_TRIGGER_PX;
-  for (const zone of ZONES) {
-    const distance = distanceToEdge(zone.edge, viewport, pointer);
-    if (distance < nearestDistance || (distance === nearestDistance && !nearest)) {
-      nearest = zone;
-      nearestDistance = distance;
-    }
-  }
-  return nearest;
+/**
+ * The zones within EDGE_TRIGGER_PX of the pointer, nearest edge first (ZONES order breaks ties).
+ * None while the pointer is over the action bar.
+ */
+function zonesInReach(viewport: Viewport, pointer: Point): ZoneDefinition[] {
+  if (pointer.y < viewport.top) return [];
+  return ZONES.map((zone) => ({ zone, distance: distanceToEdge(zone.edge, viewport, pointer) }))
+    .filter(({ distance }) => distance <= EDGE_TRIGGER_PX)
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ zone }) => zone);
 }
 
 /**
  * The zone and slot a release at `pointer` would dock `draggedId` into, or null.
- * The zone whose edge is nearest wins, if the pointer is within EDGE_TRIGGER_PX of it.
- * The slot follows the pointer half, falling back to the free slot; a full zone gives null.
+ * Of the zones whose edge is within EDGE_TRIGGER_PX, the nearest one with a free slot wins
+ * (a full zone is never a candidate). The slot follows the pointer, falling back to the free slot.
  */
 export function dockTargetAt(
   layout: Layout,
@@ -128,11 +125,12 @@ export function dockTargetAt(
   pointer: Point,
   draggedId: PanelId,
 ): DockTarget | null {
-  const zone = nearestZoneInReach(viewport, pointer);
-  if (!zone) return null;
-  const taken = occupiedSlots(layout, zone.id, draggedId);
-  const slot = freeSlot(zone, taken, slotByPointerHalf(zone, viewport, pointer));
-  return slot === null ? null : { zone: zone.id, slot };
+  for (const zone of zonesInReach(viewport, pointer)) {
+    const taken = occupiedSlots(layout, zone.id, draggedId);
+    const slot = freeSlot(zone, taken, slotByPointerHalf(zone, viewport, pointer));
+    if (slot !== null) return { zone: zone.id, slot };
+  }
+  return null;
 }
 
 /** Dock the panel into `target`, keeping its last floating rect so a later undock restores it. */

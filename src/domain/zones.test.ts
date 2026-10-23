@@ -95,6 +95,21 @@ describe('slot choice', () => {
 
     expect(dockTargetAt(layout, viewport, { x: 640, y: 790 }, 'counter')).toBeNull();
   });
+
+  it('skips a full zone near a corner for the next nearest zone in reach that has room', () => {
+    const layout = withDocked(
+      withDocked(defaultLayout(), 'increment', 'left', 0),
+      'decrement',
+      'left',
+      1,
+    );
+
+    // 30 px from the full left column's edge, 60 px from the bottom edge.
+    expect(dockTargetAt(layout, viewport, { x: 30, y: 740 }, 'counter')).toEqual({
+      zone: 'bottom',
+      slot: 0,
+    });
+  });
 });
 
 describe('docked panel geometry', () => {
