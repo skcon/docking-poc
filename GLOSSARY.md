@@ -47,3 +47,7 @@ _Avoid_: Canvas, background, viewport
 **Slot**:
 One of the two positions a zone offers for a docked panel (top or bottom in a column, left or right in the bottom strip). A slot is empty or holds one panel.
 _Avoid_: Position, cell, stack index
+
+**Dock target**:
+The zone and slot a dragged panel would dock into if released now. It is what the drop highlight shows.
+_Avoid_: Drop target, drop zone
