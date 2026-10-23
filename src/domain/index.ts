@@ -5,6 +5,7 @@ export * from './move';
 export * from './panels';
 export * from './raise';
 export * from './resize';
+export * from './stacking';
 export * from './urlCodec';
 export * from './viewport';
 export type * from './types';
