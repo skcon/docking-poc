@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dockedRectDuringDrag, dragCancel, dragEnd, dragMove, dragStart } from './drag';
+import { dragCancel, dragEnd, dragMove, dragStart } from './drag';
+import { dockedRect } from './docking';
 import { defaultLayout } from './layout';
 import type { Layout, PanelId, Rect, Viewport } from './types';
 
@@ -111,18 +112,24 @@ describe('docking by dragging to an edge', () => {
 
   it('shows the dock target while the pointer is near an edge, and clears it when it leaves', () => {
     const nearLeft = dragMove(startDragging(), viewport, { pointer: { x: 20, y: 600 } });
-    expect(nearLeft.drag?.dockTarget).toEqual({ zone: 'left', slot: 1 });
+    expect(nearLeft.drag?.dockTarget).toEqual({
+      side: 'left',
+      column: 0,
+      slot: 0,
+      kind: 'new-column',
+    });
 
     const away = dragMove(nearLeft, viewport, { pointer: { x: 600, y: 400 } });
     expect(away.drag?.dockTarget).toBeNull();
   });
 
-  it('docks the panel into the target slot when released there', () => {
+  it('docks the panel into the target when released there', () => {
     const ended = dragEnd(startDragging(), viewport, { pointer: { x: 1270, y: 100 } });
 
     expect(ended.layout.panels.counter.placement).toEqual({
       kind: 'docked',
-      zone: 'right',
+      side: 'right',
+      column: 0,
       slot: 0,
     });
     expect(ended.drag).toBeNull();
@@ -134,15 +141,21 @@ describe('docking by dragging to an edge', () => {
     expect(ended.layout.panels.counter.placement.kind).toBe('floating');
   });
 
-  it('keeps the panel floating when released over a full zone', () => {
+  it('keeps the panel floating when released over a full column', () => {
     const started = startDragging();
     const { panels } = started.layout;
     const leftFull: Layout = {
       ...started.layout,
       panels: {
         ...panels,
-        increment: { ...panels.increment, placement: { kind: 'docked', zone: 'left', slot: 0 } },
-        decrement: { ...panels.decrement, placement: { kind: 'docked', zone: 'left', slot: 1 } },
+        increment: {
+          ...panels.increment,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
+        decrement: {
+          ...panels.decrement,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 1 },
+        },
       },
     };
 
@@ -152,10 +165,44 @@ describe('docking by dragging to an edge', () => {
 
     expect(ended.layout.panels.counter.placement.kind).toBe('floating');
   });
+
+  it('stacks the panel onto a column with one panel, 50/50', () => {
+    const started = startDragging();
+    const { panels } = started.layout;
+    const oneDocked: Layout = {
+      ...started.layout,
+      panels: {
+        ...panels,
+        increment: {
+          ...panels.increment,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
+      },
+    };
+    const over = dragMove({ ...started, layout: oneDocked }, viewport, {
+      pointer: { x: 100, y: 600 },
+    });
+    expect(over.drag?.dockTarget).toEqual({ side: 'left', column: 0, slot: 1, kind: 'stack' });
+
+    const ended = dragEnd(over, viewport, { pointer: { x: 100, y: 600 } });
+
+    expect(dockedRect(ended.layout, viewport, 'increment')).toEqual({
+      x: 0,
+      y: 40,
+      width: 350,
+      height: 380,
+    });
+    expect(dockedRect(ended.layout, viewport, 'counter')).toEqual({
+      x: 0,
+      y: 420,
+      width: 350,
+      height: 380,
+    });
+  });
 });
 
 describe('undocking by dragging a docked panel’s handle', () => {
-  /** counter docked alone in the left zone, i.e. at { x: 0, y: 40, width: 350, height: 760 }. */
+  /** counter docked alone in the left column, i.e. at { x: 0, y: 40, width: 350, height: 760 }. */
   function dockedLeft(lastFloatingRect: Rect | null): Layout {
     const layout = defaultLayout();
     return {
@@ -164,7 +211,7 @@ describe('undocking by dragging a docked panel’s handle', () => {
         ...layout.panels,
         counter: {
           id: 'counter',
-          placement: { kind: 'docked', zone: 'left', slot: 0 },
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
           lastFloatingRect,
         },
       },
@@ -209,7 +256,7 @@ describe('undocking by dragging a docked panel’s handle', () => {
         // Docked alone at { x: 930, y: 40, width: 350, height: 760 }, last floated 500 wide.
         counter: {
           id: 'counter',
-          placement: { kind: 'docked', zone: 'right', slot: 0 },
+          placement: { kind: 'docked', side: 'right', column: 0, slot: 0 },
           lastFloatingRect: { x: 100, y: 100, width: 500, height: 300 },
         },
       },
@@ -225,8 +272,8 @@ describe('undocking by dragging a docked panel’s handle', () => {
     expect(rectOf(moved.layout, 'counter')).toEqual({ x: 680, y: 140, width: 500, height: 300 });
   });
 
-  /** counter in the left zone's top slot, increment in its bottom slot. */
-  function sharedLeftZone(): Layout {
+  /** counter in the top slot of the left column, increment in its bottom slot. */
+  function sharedLeftColumn(): Layout {
     const layout = dockedLeft(null);
     return {
       ...layout,
@@ -234,44 +281,29 @@ describe('undocking by dragging a docked panel’s handle', () => {
         ...layout.panels,
         increment: {
           ...layout.panels.increment,
-          placement: { kind: 'docked', zone: 'left', slot: 1 },
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 1 },
         },
       },
       zOrder: ['counter', 'increment', 'decrement'],
     };
   }
 
-  it('leaves the other docked panel in its slot', () => {
-    const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
+  it('lets the remaining panel fill the column as soon as the other floats', () => {
+    const started = dragStart({ layout: sharedLeftColumn(), drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },
     });
-    const ended = dragEnd(started, viewport, { pointer: { x: 640, y: 400 } });
+    expect(dockedRect(started.layout, viewport, 'increment')?.height).toBe(380);
 
-    expect(ended.layout.panels.increment.placement).toEqual({
-      kind: 'docked',
-      zone: 'left',
-      slot: 1,
-    });
-  });
-
-  it('keeps the remaining panel’s rect while the drag is in progress, then lets it fill the column', () => {
-    const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
-      panelId: 'counter',
-      pointer: { x: 100, y: 50 },
-    });
     const moved = dragMove(started, viewport, { pointer: { x: 640, y: 400 } });
 
-    // The bottom half of the left column, as before the drag.
-    expect(dockedRectDuringDrag(moved, viewport, 'increment')).toEqual({
-      x: 0,
-      y: 420,
-      width: 350,
-      height: 380,
+    expect(moved.layout.panels.increment.placement).toEqual({
+      kind: 'docked',
+      side: 'left',
+      column: 0,
+      slot: 0,
     });
-
-    const ended = dragEnd(moved, viewport, { pointer: { x: 640, y: 400 } });
-    expect(dockedRectDuringDrag(ended, viewport, 'increment')).toEqual({
+    expect(dockedRect(moved.layout, viewport, 'increment')).toEqual({
       x: 0,
       y: 40,
       width: 350,
@@ -279,8 +311,29 @@ describe('undocking by dragging a docked panel’s handle', () => {
     });
   });
 
-  it('brings the panel it floated out of its zone to the front', () => {
-    const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
+  it('moves the columns further in toward the edge as soon as a column’s only panel floats', () => {
+    const layout = dockedLeft(null);
+    const twoColumns: Layout = {
+      ...layout,
+      panels: {
+        ...layout.panels,
+        decrement: {
+          ...layout.panels.decrement,
+          placement: { kind: 'docked', side: 'left', column: 1, slot: 0 },
+        },
+      },
+    };
+    const started = dragStart({ layout: twoColumns, drag: null }, viewport, {
+      panelId: 'counter',
+      pointer: { x: 100, y: 50 },
+    });
+    const moved = dragMove(started, viewport, { pointer: { x: 640, y: 400 } });
+
+    expect(dockedRect(moved.layout, viewport, 'decrement')?.x).toBe(0);
+  });
+
+  it('brings the panel it floated out of its column to the front', () => {
+    const started = dragStart({ layout: sharedLeftColumn(), drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },
     });
@@ -288,8 +341,8 @@ describe('undocking by dragging a docked panel’s handle', () => {
     expect(started.layout.zOrder).toEqual(['increment', 'decrement', 'counter']);
   });
 
-  it('can dock the panel again in the same gesture, even back into its old slot', () => {
-    const started = dragStart({ layout: sharedLeftZone(), drag: null }, viewport, {
+  it('can dock the panel again in the same gesture, even back onto its old column, on top', () => {
+    const started = dragStart({ layout: sharedLeftColumn(), drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },
     });
@@ -299,12 +352,14 @@ describe('undocking by dragging a docked panel’s handle', () => {
 
     expect(backToRight.layout.panels.counter.placement).toEqual({
       kind: 'docked',
-      zone: 'right',
+      side: 'right',
+      column: 0,
       slot: 0,
     });
     expect(backToOldSlot.layout.panels.counter.placement).toEqual({
       kind: 'docked',
-      zone: 'left',
+      side: 'left',
+      column: 0,
       slot: 0,
     });
   });
@@ -335,7 +390,7 @@ describe('the drag threshold', () => {
         ...layout.panels,
         counter: {
           id: 'counter',
-          placement: { kind: 'docked', zone: 'left', slot: 0 },
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
           lastFloatingRect: null,
         },
       },
@@ -351,7 +406,8 @@ describe('the drag threshold', () => {
 
     expect(ended.layout.panels.counter.placement).toEqual({
       kind: 'docked',
-      zone: 'left',
+      side: 'left',
+      column: 0,
       slot: 0,
     });
     expect(ended.drag).toBeNull();
@@ -390,14 +446,17 @@ describe('cancelling a handle drag', () => {
       ...layout,
       panels: {
         ...layout.panels,
-        counter: { ...layout.panels.counter, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+        counter: {
+          ...layout.panels.counter,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
       },
     };
     const started = dragStart({ layout: docked, drag: null }, viewport, {
       panelId: 'counter',
       pointer: { x: 100, y: 50 },
     });
-    // Undocked and hovering the right zone.
+    // Undocked and hovering the right edge.
     const moved = dragMove(started, viewport, { pointer: { x: 1270, y: 300 } });
     expect(moved.drag?.dockTarget).not.toBeNull();
 

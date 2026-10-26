@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dockedRectDuringDrag, PANEL_IDS, PANEL_TITLES, stackingOf } from '../domain';
+import { dockedRect, PANEL_IDS, PANEL_TITLES, stackingOf } from '../domain';
 import { useAppStore } from '../state/store';
 import { DropHighlight } from './DropHighlight';
 import { Panel } from './Panel';
@@ -9,7 +9,6 @@ import { currentViewport, useWindowResize } from './viewport';
 /** Renders every panel from the store's layout and the drop highlight, stacked by stackingOf. */
 export function PanelLayer() {
   const layout = useAppStore((s) => s.layout);
-  const drag = useAppStore((s) => s.drag);
   // Docked rects and the drop highlight are derived from the viewport, so re-render on resize.
   const [viewport, setViewport] = useState(currentViewport);
   useWindowResize(setViewport);
@@ -27,7 +26,7 @@ export function PanelLayer() {
             panel={layout.panels[id]}
             title={PANEL_TITLES[id]}
             zIndex={stacking.panels[id]}
-            dockedRect={dockedRectDuringDrag({ layout, drag }, viewport, id)}
+            dockedRect={dockedRect(layout, viewport, id)}
           >
             <Content />
           </Panel>

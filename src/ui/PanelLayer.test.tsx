@@ -56,7 +56,7 @@ describe('docking panels', () => {
   });
 
   // jsdom's window is 1024 x 768; the map starts below the 40 px action bar.
-  it('shows a drop highlight over a zone while a panel is dragged near its edge', () => {
+  it('shows a drop highlight where the panel would dock while it is dragged near an edge', () => {
     render(<App />);
     const handle = within(panel('Counter')).getByTestId('handle');
     const { left, top } = panel('Counter').style;
@@ -67,8 +67,11 @@ describe('docking panels', () => {
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10, clientY: 300 });
 
     const highlight = screen.getByTestId('drop-highlight');
-    expect(highlight).toHaveAttribute('data-zone', 'left');
+    expect(highlight).toHaveAttribute('data-side', 'left');
+    expect(highlight).toHaveAttribute('data-kind', 'new-column');
+    expect(highlight.style.left).toBe('0px');
     expect(highlight.style.width).toBe('350px');
+    expect(highlight.style.height).toBe(`${768 - 40}px`);
 
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 500, clientY: 300 });
     expect(screen.queryByTestId('drop-highlight')).not.toBeInTheDocument();
@@ -86,6 +89,31 @@ describe('docking panels', () => {
     expect(counter.style.top).toBe('40px');
     expect(counter.style.width).toBe('350px');
     expect(counter.style.height).toBe(`${768 - 40}px`);
+  });
+
+  it('stacks a panel onto a column with one panel, 50/50', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const increment = panel('Increment');
+    const grabOf = (el: HTMLElement) => ({
+      x: parseFloat(el.style.left) + 10,
+      y: parseFloat(el.style.top) + 10,
+    });
+    dragHandle('Counter', grabOf(counter), { x: 10, y: 100 });
+
+    const handle = within(increment).getByTestId('handle');
+    const grab = grabOf(increment);
+    fireEvent.pointerDown(handle, { pointerId: 1, button: 0, clientX: grab.x, clientY: grab.y });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 100, clientY: 600 });
+    const preview = screen.getByTestId('drop-highlight');
+    expect(preview).toHaveAttribute('data-kind', 'stack');
+    expect(preview.style.top).toBe(`${40 + (768 - 40) / 2}px`);
+    expect(preview.style.height).toBe(`${(768 - 40) / 2}px`);
+    fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: 100, clientY: 600 });
+
+    expect(counter.style.height).toBe(`${(768 - 40) / 2}px`);
+    expect(increment.style.top).toBe(`${40 + (768 - 40) / 2}px`);
+    expect(increment.style.left).toBe('0px');
   });
 
   it('offers no resize edges on a docked panel', () => {
@@ -137,7 +165,7 @@ describe('undocking panels', () => {
     expect(counter.style.top).toBe('290px');
   });
 
-  it('keeps the neighbour in its half of the column until the dragged panel is released', () => {
+  it('lets the neighbour fill the column as soon as the dragged panel floats', () => {
     render(<App />);
     const counter = panel('Counter');
     const increment = panel('Increment');
@@ -149,14 +177,32 @@ describe('undocking panels', () => {
     dragHandle('Increment', grabOf(increment), { x: 10, y: 700 });
     const half = `${(768 - 40) / 2}px`;
     expect(increment.style.height).toBe(half);
+    expect(counter.style.height).toBe(half);
 
     const handle = within(counter).getByTestId('handle');
     fireEvent.pointerDown(handle, { pointerId: 1, button: 0, clientX: 100, clientY: 50 });
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 600, clientY: 300 });
-    expect(increment.style.height).toBe(half);
 
-    fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: 600, clientY: 300 });
     expect(increment.style.height).toBe(`${768 - 40}px`);
+    expect(increment.style.top).toBe('40px');
+  });
+
+  it('closes the gap when the only panel of a column leaves', () => {
+    render(<App />);
+    const counter = panel('Counter');
+    const increment = panel('Increment');
+    const grabOf = (el: HTMLElement) => ({
+      x: parseFloat(el.style.left) + 10,
+      y: parseFloat(el.style.top) + 10,
+    });
+    dragHandle('Counter', grabOf(counter), { x: 10, y: 100 });
+    // Just inside the inner edge of the left column: a new column at x = 350.
+    dragHandle('Increment', grabOf(increment), { x: 400, y: 100 });
+    expect(increment.style.left).toBe('350px');
+
+    dragHandle('Counter', { x: 100, y: 50 }, { x: 600, y: 400 });
+
+    expect(increment.style.left).toBe('0px');
   });
 });
 

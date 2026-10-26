@@ -8,7 +8,7 @@ type PanelProps = {
   panel: PanelState;
   title: string;
   zIndex: number;
-  /** Where the zone lays this panel out when it is docked (from the domain's dockedRect). */
+  /** Where its column lays this panel out when it is docked (from the domain's dockedRect). */
   dockedRect?: Rect | null;
   children: ReactNode;
 };

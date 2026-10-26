@@ -4,7 +4,7 @@ import { ACTION_BAR_HEIGHT_PX } from '../domain';
 const MENUS = ['File', 'View', 'Settings'] as const;
 type MenuName = (typeof MENUS)[number];
 
-/** The bar across the top holding placeholder menus. It is not a zone. */
+/** The bar across the top holding placeholder menus. Docked columns start below it. */
 export function ActionBar() {
   const [openMenu, setOpenMenu] = useState<MenuName | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
