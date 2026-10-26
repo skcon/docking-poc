@@ -19,7 +19,10 @@ describe('stacking panels and the drop highlight', () => {
     const counterDockedInFront: Layout = {
       panels: {
         ...layout.panels,
-        counter: { ...layout.panels.counter, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+        counter: {
+          ...layout.panels.counter,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
       },
       zOrder: ['increment', 'decrement', 'counter'],
     };

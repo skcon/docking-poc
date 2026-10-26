@@ -44,7 +44,7 @@ describe('layout in the URL', () => {
     resetStore();
   });
 
-  it('rebuilds a layout from the link on load', async () => {
+  it('rebuilds a layout from a version 1 link on load', async () => {
     renderAt(
       '/?layout=v1_counter~d~right~1~n_decrement~f~500~200~250~150~500~200~250~150_increment~d~right~0~n',
     );
@@ -81,7 +81,7 @@ describe('layout in the URL', () => {
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10, clientY: 300 });
     fireEvent.pointerUp(handle, { pointerId: 1, button: 0, clientX: 10, clientY: 300 });
 
-    await expect.poll(() => layoutParam(router)).toMatch(/^v1_.*counter~d~left~0~/);
+    await expect.poll(() => layoutParam(router)).toMatch(/^v2_.*counter~d~left~0~0~/);
     expect(history.length).toBe(entriesBefore);
   });
 
@@ -117,7 +117,7 @@ describe('layout in the URL', () => {
   it('leaves a docked panel docked and the URL alone when its handle is clicked without moving', async () => {
     // Counter docked alone in the right column, already in front.
     const link =
-      'v1_increment~f~440~120~320~240~440~120~320~240_decrement~f~480~160~320~240~n_counter~d~right~0~n';
+      'v2_increment~f~440~120~320~240~440~120~320~240_decrement~f~480~160~320~240~n_counter~d~right~0~0~n';
     const { router } = renderAt(`/?layout=${link}`);
     const counter = await screen.findByRole('region', { name: 'Counter' });
 
@@ -171,7 +171,7 @@ describe('layout in the URL', () => {
     fireEvent.pointerDown(within(counter).getByRole('status'), { pointerId: 1, button: 0 });
     fireEvent.pointerUp(within(counter).getByRole('status'), { pointerId: 1, button: 0 });
 
-    await expect.poll(() => layoutParam(router)).toMatch(/^v1_increment~.*_decrement~.*_counter~/);
+    await expect.poll(() => layoutParam(router)).toMatch(/^v2_increment~.*_decrement~.*_counter~/);
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,15 +4,15 @@
  * This module only orchestrates; each concern lives in its own module:
  * - move.ts: moving a floating panel and clamping its handle on screen
  * - raise.ts: z-order
- * - zones.ts: dock target and docking
+ * - docking.ts: dock target, docking and the compact column layout
  * - undock.ts: floating a docked panel under the pointer
  */
 import { DRAG_THRESHOLD_PX } from './constants';
+import { dockedRect, dockPanel, dockTargetAt } from './docking';
 import { moveFloatingPanel } from './move';
 import { floatingRectOf } from './panels';
 import { raisePanel } from './raise';
 import { undockPanel } from './undock';
-import { dockedRect, dockPanel, dockTargetAt } from './zones';
 import type {
   ActiveDrag,
   DragEndEvent,
@@ -20,9 +20,7 @@ import type {
   DragSession,
   DragStartEvent,
   Layout,
-  PanelId,
   Point,
-  Rect,
   Viewport,
 } from './types';
 
@@ -47,7 +45,6 @@ export function dragStart(
       moved: false,
       grabOffset: { x: event.pointer.x - rect.x, y: event.pointer.y - rect.y },
       dockTarget: null,
-      originSlot: null,
     },
   };
 }
@@ -55,7 +52,8 @@ export function dragStart(
 /**
  * Pointer move while dragging. Within DRAG_THRESHOLD_PX of the press nothing happens. Past it,
  * a docked panel is undocked under the press point (undock.ts), and the panel then follows the
- * pointer at its grab offset, targeting the zone a release would dock it into.
+ * pointer at its grab offset, targeting the column a release would dock it into. The dragged panel is no longer part of the
+ * docked layout, which closes up at once.
  */
 export function dragMove(
   session: DragSession,
@@ -82,23 +80,17 @@ function pastThreshold(drag: ActiveDrag, pointer: Point): boolean {
   return distance > DRAG_THRESHOLD_PX;
 }
 
-/** The press has become a drag: float a docked panel out of its zone under the press point. */
+/** The press has become a drag: float a docked panel out of its column under the press point. */
 function beginMoving(
   layout: Layout,
   viewport: Viewport,
   drag: ActiveDrag,
 ): { layout: Layout; drag: ActiveDrag } {
-  const placement = layout.panels[drag.panelId].placement;
   const floated = undockPanel(layout, viewport, drag.panelId, drag.startPointer);
-  if (!floated || placement.kind !== 'docked') return { layout, drag: { ...drag, moved: true } };
+  if (!floated) return { layout, drag: { ...drag, moved: true } };
   return {
     layout: floated.layout,
-    drag: {
-      ...drag,
-      moved: true,
-      grabOffset: floated.grabOffset,
-      originSlot: { zone: placement.zone, slot: placement.slot },
-    },
+    drag: { ...drag, moved: true, grabOffset: floated.grabOffset },
   };
 }
 
@@ -122,17 +114,4 @@ export function dragEnd(
  */
 export function dragCancel(session: DragSession): DragSession {
   return session.drag ? { layout: session.drag.startLayout, drag: null } : session;
-}
-
-/**
- * A docked panel's rect while `session`'s drag is in progress: the slot the dragged panel was
- * undocked from still counts as occupied, so the other panels in that zone keep their rects
- * until the drag ends. With no drag in progress this is dockedRect.
- */
-export function dockedRectDuringDrag(
-  session: DragSession,
-  viewport: Viewport,
-  panelId: PanelId,
-): Rect | null {
-  return dockedRect(session.layout, viewport, panelId, session.drag?.originSlot ?? null);
 }

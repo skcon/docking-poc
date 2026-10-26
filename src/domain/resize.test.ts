@@ -173,7 +173,10 @@ describe('the resize lifecycle', () => {
       ...layout,
       panels: {
         ...layout.panels,
-        counter: { ...layout.panels.counter, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+        counter: {
+          ...layout.panels.counter,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
       },
     };
     const started = resizeStart({ layout: docked, resize: null }, viewport, {
@@ -186,7 +189,8 @@ describe('the resize lifecycle', () => {
     expect(started.resize).toBeNull();
     expect(moved.layout.panels.counter.placement).toEqual({
       kind: 'docked',
-      zone: 'left',
+      side: 'left',
+      column: 0,
       slot: 0,
     });
   });

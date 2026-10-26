@@ -59,7 +59,10 @@ describe('clamping floating panels when the browser window is resized', () => {
       ...layout,
       panels: {
         ...layout.panels,
-        counter: { ...layout.panels.counter, placement: { kind: 'docked', zone: 'left', slot: 0 } },
+        counter: {
+          ...layout.panels.counter,
+          placement: { kind: 'docked', side: 'left', column: 0, slot: 0 },
+        },
       },
     };
 

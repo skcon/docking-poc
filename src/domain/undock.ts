@@ -1,14 +1,14 @@
 /**
- * Undocking: turning a docked panel into a floating panel under the pointer (ticket #7).
+ * Undocking: turning a docked panel into a floating panel under the pointer.
  */
 import { DEFAULT_FLOATING } from './constants';
+import { dockedRect, normalizeDocks } from './docking';
 import { clampHandleOnScreen } from './move';
 import { withFloatingRect } from './panels';
 import type { Layout, PanelId, Point, Viewport } from './types';
-import { dockedRect } from './zones';
 
-/** The layout with the panel floated out of its zone, and the grab offset the drag continues with. */
-export type FloatedFromZone = { layout: Layout; grabOffset: Point };
+/** The layout with the panel floated out of its column, and the grab offset the drag continues with. */
+export type FloatedFromColumn = { layout: Layout; grabOffset: Point };
 
 /**
  * Float a docked panel under `pointer`, keeping the point where its handle was grabbed.
@@ -16,7 +16,8 @@ export type FloatedFromZone = { layout: Layout; grabOffset: Point };
  * floating panel is narrower than its docked rect, the horizontal grab offset is scaled
  * proportionally so the pointer stays on the (shorter) handle. The vertical offset is kept:
  * the handle has the same height docked and floating. The handle is kept on screen (which
- * may shift the panel under the pointer). Other panels keep their slots.
+ * may shift the panel under the pointer). The docked layout closes up at once: a panel left alone
+ * in a column takes its full height and columns further in move toward the edge.
  * Returns null if the panel is not docked.
  */
 export function undockPanel(
@@ -24,7 +25,7 @@ export function undockPanel(
   viewport: Viewport,
   panelId: PanelId,
   pointer: Point,
-): FloatedFromZone | null {
+): FloatedFromColumn | null {
   const docked = dockedRect(layout, viewport, panelId);
   if (!docked) return null;
   const { width, height } = layout.panels[panelId].lastFloatingRect ?? DEFAULT_FLOATING;
@@ -39,5 +40,5 @@ export function undockPanel(
   );
   // Clamping may shift the panel; the drag continues from where the pointer really is on it.
   const grabOffset = { x: pointer.x - rect.x, y: pointer.y - rect.y };
-  return { layout: withFloatingRect(layout, panelId, rect), grabOffset };
+  return { layout: normalizeDocks(withFloatingRect(layout, panelId, rect)), grabOffset };
 }
